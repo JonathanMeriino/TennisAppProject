@@ -1,0 +1,179 @@
+-- Tabla categoria
+CREATE TABLE categoria (
+	idCategoria SERIAL PRIMARY KEY,
+	nombreCategoria VARCHAR(255) UNIQUE NOT NULL
+);
+
+-- Tabla rol
+CREATE TABLE roles(
+	idRol SERIAL PRIMARY KEY NOT NULL,
+	nombreRol VARCHAR(100) NOT NULL
+);
+
+-- Tabla usuario 
+CREATE TABLE usuario (
+	idUsuario SERIAL PRIMARY KEY,
+	nombreUsuario VARCHAR(255) NOT NULL,
+	edad INTEGER,
+	sexo CHAR(1), -- 'M' o 'F'
+	boleta INTEGER UNIQUE NOT NULL,
+	correo VARCHAR (50) UNIQUE NOT NULL,
+	contrasena VARCHAR(255) NOT NULL,
+	hash VARCHAR(255),
+	-- clave foranea a roles (FK idRol)
+	idRol INTEGER NOT NULL,
+	FOREIGN KEY (idRol) REFERENCES roles (idRol) ON UPDATE CASCADE ON DELETE RESTRICT,
+	-- clave foranea a categoria (FK idCategoria)
+	idCategoria INTEGER,
+	FOREIGN KEY (idCategoria) REFERENCES categoria(idCategoria) ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+-- Tabla formato
+CREATE TABLE formato (
+	idFormato SERIAL PRIMARY KEY,
+	NombreFormato VARCHAR(50) NOT NULL  -- RR EL  RR + EL
+);	
+
+-- Tabla Torneo
+
+CREATE TABLE torneo (
+	idTorneo SERIAL PRIMARY KEY,
+	nombreTorneo VARCHAR(255) NOT NULL,
+	tipo VARCHAR (50), -- Singles , Dobles
+	rama VARCHAR (50), -- Varonil , Femenil , Mixto
+	numeroGrupos INTEGER,
+	tamanoGrupos INTEGER,
+	fechaInicio DATE NOT NULL,
+	fechaFin DATE ,
+	estado VARCHAR (50), -- Pendiente, en curso, finalizado
+	-- FK a formato
+	formato_id INTEGER NOT NULL,
+	FOREIGN KEY (formato_id) REFERENCES formato(idFormato) ON UPDATE CASCADE ON DELETE  RESTRICT,
+	-- FK a categoria
+	categoria_id INTEGER NOT NULL,
+	FOREIGN KEY (categoria_id) REFERENCES categoria(idCategoria) ON UPDATE CASCADE ON DELETE RESTRICT
+	);
+
+-- Tabla cuadro
+CREATE TABLE cuadro (
+	idCuadro SERIAL PRIMARY KEY,
+	tamanoCuadro INTEGER NOT NULL , -- EJ: 8 , 16,32
+	--FK a Torneo
+	torneo_id INTEGER UNIQUE NOT NULL , -- Un torneo solo tiene un cuadro principal
+	FOREIGN KEY (torneo_id) REFERENCES torneo (idTorneo) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- Tabla gruposCategoria
+
+CREATE TABLE gruposCategoria (
+	idgrupoCategoria SERIAL PRIMARY KEY,
+	nombreGrupo VARCHAR (50) UNIQUE NOT NULL, -- Grupo A, B ,C ...
+	--FK a torneo
+	torneo_id INTEGER NOT NULL,
+	FOREIGN KEY (torneo_id) references torneo(idTorneo) ON UPDATE CASCADE ON DELETE CASCADE
+	
+);
+
+--Tabla inscripciones
+
+CREATE TABLE inscripciones (
+	idInscripcion SERIAL PRIMARY KEY, 
+	estadoIncripcion VARCHAR (50) NOT NULL, -- Ej: Pendiente/Aceptada
+	fecha_inscripcion DATE DEFAULT CURRENT_DATE,
+	--FK a Torneo
+	torneo_id INTEGER NOT NULL,
+	FOREIGN KEY (torneo_id) REFERENCES torneo(idTorneo) ON UPDATE CASCADE ON DELETE CASCADE,
+	-- FK a Usuario (Jugador 1)
+    jugador_1_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (jugador_1_id) REFERENCES Usuario(idUsuario) ON UPDATE CASCADE ON DELETE RESTRICT,
+    
+    -- FK a Usuario (Jugador 2 - Opcional para dobles)
+    jugador_2_id INTEGER UNIQUE,
+    FOREIGN KEY (jugador_2_id) REFERENCES Usuario(idUsuario) ON UPDATE CASCADE ON DELETE SET NULL
+    
+);
+-- Tabla disponibilidad
+CREATE TABLE disponibilidad(
+	idDisponibilidad SERIAL PRIMARY KEY,
+	diaSemana VARCHAR(10) NOT NULL, -- Ej: 'Lunes', 'Martes'
+	hora_inicio TIME NOT NULL,
+	hora_fin TIME NOT NULL,
+	esta_disponible BOOLEAN NOT NULL DEFAULT TRUE,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	--FK a incripciones
+	inscripcion_id INTEGER NOT NULL,
+	FOREIGN KEY (inscripcion_id) REFERENCES inscripciones(idInscripcion) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- Tabla miembros grupo
+
+CREATE TABLE miembrosGrupo(
+	idMiembrosGrupo SERIAL PRIMARY KEY,
+	-- FK a gruposCategoria
+    grupo_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (grupo_id) REFERENCES gruposCategoria(idgrupoCategoria) ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    -- FK a Inscripciones
+    inscripcion_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (inscripcion_id) REFERENCES Inscripciones(idInscripcion) ON UPDATE CASCADE ON DELETE CASCADE
+   );
+-- Tabla Posiciones grupo
+
+CREATE TABLE PosicionesGrupo (
+    idPosicionGrupo SERIAL PRIMARY KEY,
+    partidosJugados INTEGER NOT NULL DEFAULT 0,
+    partidosGanados INTEGER NOT NULL DEFAULT 0,
+    partidosPerdidos INTEGER NOT NULL DEFAULT 0,
+    setsFavor INTEGER NOT NULL DEFAULT 0,
+    setsContra INTEGER NOT NULL DEFAULT 0,
+    juegosFavor INTEGER NOT NULL DEFAULT 0,
+    juegosContra INTEGER NOT NULL DEFAULT 0,
+    puntos INTEGER NOT NULL DEFAULT 0,
+    
+    -- FK a Torneo
+    Torneo_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (Torneo_id) REFERENCES Torneo(idTorneo) ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    -- FK a gruposCategoria
+    grupo_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (grupo_id) REFERENCES gruposCategoria(idgrupoCategoria) ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    -- FK a Inscripciones
+    inscripcion_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (inscripcion_id) REFERENCES inscripciones(idInscripcion) ON UPDATE CASCADE ON DELETE CASCADE
+    
+    -- Unicidad: Una inscripción solo tiene una posición por grupo en un torneo.
+ 
+);
+-- Tabla Partido
+
+CREATE TABLE partido (
+	idPartido SERIAL PRIMARY KEY,
+    estado VARCHAR(50), -- Programado, En juego, Finalizado
+    fechaPartido DATE,
+    horaPartido TIME,
+    grupo_id INTEGER, -- Si aplica para torneos con grupos (No mostrado en el diagrama, pero incluido)
+	-- FK a Inscripciones 
+    ins_a_id INTEGER NOT NULL,
+    FOREIGN KEY (ins_a_id) REFERENCES inscripciones(idInscripcion) ON UPDATE CASCADE ON DELETE RESTRICT,
+    
+    ins_b_id INTEGER NOT NULL,
+    FOREIGN KEY (ins_b_id) REFERENCES inscripciones(idInscripcion) ON UPDATE CASCADE ON DELETE RESTRICT,
+    
+    ganador_ins_id INTEGER, -- Puede ser NULL hasta que el partido termine
+    FOREIGN KEY (ganador_ins_id) REFERENCES inscripciones(idInscripcion) ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+-- Tabla Sets (Relacionada con Partido)
+CREATE TABLE Sets (
+    idSets SERIAL PRIMARY KEY,
+    numSet INTEGER UNIQUE NOT NULL,
+    juegos_j1 INTEGER NOT NULL, -- Juegos ganados por el participante A (ins_a_id)
+    juegos_j2 INTEGER NOT NULL, -- Juegos ganados por el participante B (ins_b_id)
+    
+    -- FK a Partido
+    partido_id INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY ("partido_id") REFERENCES partido(idPartido) ON UPDATE CASCADE ON DELETE CASCADE
+    -- Restricción de unicidad: No puede haber dos sets con el mismo número para el mismo partido
+);
