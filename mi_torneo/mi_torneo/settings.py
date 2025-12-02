@@ -37,6 +37,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # mi_torneo/settings.py
+    'rest_framework',
+    'torneos_app.apps.TorneosAppConfig', 
+
 ]
 
 MIDDLEWARE = [
@@ -74,8 +78,14 @@ WSGI_APPLICATION = "mi_torneo.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        #"ENGINE": "django.db.backends.sqlite3",
+        #"NAME": BASE_DIR / "db.sqlite3",
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'TenisApp',
+        'USER': 'postgres',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
