@@ -177,3 +177,5 @@ CREATE TABLE Sets (
     FOREIGN KEY ("partido_id") REFERENCES partido(idPartido) ON UPDATE CASCADE ON DELETE CASCADE
     -- Restricción de unicidad: No puede haber dos sets con el mismo número para el mismo partido
 );
+
+ALTER TABLE categoria ADD COLUMN Ranking INTEGER;
