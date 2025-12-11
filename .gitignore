@@ -1,1 +1,3 @@
 myapp/migrations/
+myapp/__pycache__/
+tenis_app/__pycache__/
