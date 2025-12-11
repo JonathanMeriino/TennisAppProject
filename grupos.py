@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-import pandas as pd 
+import pandas as pd
 import random
+
 """
 #Leer archivo de excel
 df = pd.read_excel('Singles.xlsx')
@@ -68,7 +69,6 @@ df = df.reset_index(drop=True)
 
 # Guardar en un nuevo archivo Excel
 df.to_excel("Jugadores_Filtrados.xlsx", index=False)"""
-
 
 
 # %%
@@ -152,26 +152,34 @@ horario_cols = {
     df.columns[13]: "10_12",
     df.columns[14]: "12_14",
     df.columns[15]: "14_16",
-    df.columns[16]: "16_18"
+    df.columns[16]: "16_18",
 }
 df.rename(columns=horario_cols, inplace=True)
 # Preguntar cuántos DataFrames se van a crear
 num_dfs = int(input("¿Cuántos DataFrames quieres crear? "))
 
 # Filtrar jugadores con ranking y sin ranking
-df_ranked = df.dropna(subset=["Ranking"]).sort_values(by="Ranking", ascending=True).reset_index(drop=True)
+df_ranked = (
+    df.dropna(subset=["Ranking"])
+    .sort_values(by="Ranking", ascending=True)
+    .reset_index(drop=True)
+)
 df_unranked = df[df["Ranking"].isna()].reset_index(drop=True)
 
 # Separar la primera mitad de los jugadores con ranking (ordenados)
 midpoint = len(df_ranked) // 2
 ranked_first_half = df_ranked.iloc[:midpoint]  # Ordenados
-ranked_second_half = df_ranked.iloc[midpoint:].sample(frac=1).reset_index(drop=True)  # Mezclados
+ranked_second_half = (
+    df_ranked.iloc[midpoint:].sample(frac=1).reset_index(drop=True)
+)  # Mezclados
 
 # Mezclar jugadores sin ranking aleatoriamente
 df_unranked = df_unranked.sample(frac=1).reset_index(drop=True)
 
 # Unir todos los jugadores en el orden correcto
-players_list = pd.concat([ranked_first_half, ranked_second_half, df_unranked]).reset_index(drop=True)
+players_list = pd.concat(
+    [ranked_first_half, ranked_second_half, df_unranked]
+).reset_index(drop=True)
 
 # Dividir los jugadores en los DataFrames solicitados
 dataframes = []
