@@ -66,7 +66,7 @@ class MiembrosGrupoSerializaer(serializers.ModelSerializer):
         fields = '__all__'
 #Serializer PosicionesGrupo
 
-class PosicionesGrupo (serializers.ModelSerializer):
+class PosicionesGrupoSerializer (serializers.ModelSerializer):
     class Meta:
         model = PosicionesGrupo
         fields = '__all__'
