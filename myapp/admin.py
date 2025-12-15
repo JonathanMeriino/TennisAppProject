@@ -8,7 +8,7 @@ from .models import (
 # --- 1. Tablas Base e Independientes ---
 
 # Registro simple de las tablas sin personalización
-admin.site.register(Categoria)
+admin.site.register(Categoria) # Listo
 admin.site.register(Roles)
 admin.site.register(Formato)
 
