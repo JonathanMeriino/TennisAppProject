@@ -18,10 +18,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.documentation import include_docs_urls
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("myapp/v1/",include('myapp.urls')),
-    path("docs/", include_docs_urls(title="Api documentation"))
+    path("docs/", include_docs_urls(title="Api documentation")),
+    # Ruta para iniciar sesión (Login)
+    path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # Ruta para obtener un nuevo Access Token usando el Refresh Token
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
 ]
