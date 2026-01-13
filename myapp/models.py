@@ -1,5 +1,5 @@
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
-
 # Create your models here.
 # --- Tablas Base e Independientes ---
 
@@ -31,23 +31,45 @@ class Formato(models.Model):
 
 # --- Tablas con Relaciones ---
 
-class Usuario(models.Model):
+# Necesitas un Manager para manejar la creación de usuarios desde consola
+class UsuarioManager(BaseUserManager):
+    def create_user(self, correo, nombreUsuario, password=None, **extra_fields):
+        if not correo:
+            raise ValueError('El usuario debe tener un correo electrónico')
+        correo = self.normalize_email(correo)
+        user = self.model(correo=correo, nombreUsuario=nombreUsuario, **extra_fields)
+        user.set_password(password) # Esto hashea la contraseña automáticamente
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, correo, nombreUsuario, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(correo, nombreUsuario, password, **extra_fields)
+
+class Usuario(AbstractBaseUser, PermissionsMixin):
     idUsuario = models.AutoField(primary_key=True)
-    nombreUsuario = models.CharField(max_length=255)
+    nombreUsuario = models.CharField(max_length=255, unique=True)
     edad = models.IntegerField(null=True, blank=True)
     sexo = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], null=True, blank=True)
-    boleta = models.IntegerField(unique=True) 
-    correo = models.CharField(max_length=50, unique=True)
-    contrasena = models.CharField(max_length=255)
-    hash = models.CharField(max_length=255, null=True, blank=True)
+    boleta = models.IntegerField(unique=True)
+    correo = models.EmailField(max_length=50, unique=True)
     
-    # FKs
-    idRol = models.ForeignKey(Roles, on_delete=models.RESTRICT, db_column='idRol')
-    idCategoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, db_column='idCategoria', null=True, blank=True)
+    # Campos obligatorios para compatibilidad con Django
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    # FKs existentes
+    idRol = models.ForeignKey('Roles', on_delete=models.RESTRICT, db_column='idRol', null=True, blank=True)
+    idCategoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, db_column='idCategoria', null=True, blank=True)
+
+    objects = UsuarioManager()
+
+    USERNAME_FIELD = 'correo'          # Campo para iniciar sesión
+    REQUIRED_FIELDS = ['nombreUsuario', 'boleta'] # Campos para el createsuperuser
 
     class Meta:
-        db_table = 'usuario'
-        verbose_name_plural = "Usuarios"
+        db_table = 'usuario' # Mantiene el nombre de tu tabla en Postgres
 
 class Torneo(models.Model):
     idTorneo = models.AutoField(primary_key=True)
