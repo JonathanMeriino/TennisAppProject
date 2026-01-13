@@ -1,4 +1,3 @@
-myapp/migrations/
-myapp/__pycache__/
-tenis_app/__pycache__/
-db.sqlite3
+Backend/myapp/migrations/
+Backend/myapp/__pycache__/
+Backend/tenis_app/__pycache__/
