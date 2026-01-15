@@ -17,16 +17,21 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework.documentation import include_docs_urls
+
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView    
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("myapp/v1/",include('myapp.urls')),
-    path("docs/", include_docs_urls(title="Api documentation")),
+    #Swagger URLs
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='api-docs'),
+    
     # Ruta para iniciar sesión (Login)
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     # Ruta para obtener un nuevo Access Token usando el Refresh Token
