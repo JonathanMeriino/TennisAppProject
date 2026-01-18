@@ -1,7 +1,37 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.contrib.auth.models import User # Importa el modelo User de Django
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 # Create your models here.
 # --- Tablas Base e Independientes ---
+
+class Perfil(models.Model):
+    # La clave mágica: Un usuario tiene un solo perfil
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    
+    # Tus campos personalizados
+    boleta = models.CharField(max_length=20, unique=True)
+    edad = models.IntegerField(null=True, blank=True)
+    sexo = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], null=True, blank=True)
+    
+    # Relaciones
+    idRol = models.ForeignKey('Roles', on_delete=models.RESTRICT, db_column='idRol', null=True, blank=True)
+    idCategoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, db_column='idCategoria', null=True, blank=True)
+
+    def __str__(self):
+        return f"Perfil de {self.user.username}"
+
+# --- AUTOMATIZACIÓN (SIGNALS) ---
+# Esto es vital: Cuando se crea un User, se crea automáticamente un Perfil vacío.
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Perfil.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.perfil.save()
 
 class Categoria(models.Model):
     # Django auto-crea 'id' si no se especifica. Usamos el nombre explícito para claridad.
@@ -31,45 +61,6 @@ class Formato(models.Model):
 
 # --- Tablas con Relaciones ---
 
-# Necesitas un Manager para manejar la creación de usuarios desde consola
-class UsuarioManager(BaseUserManager):
-    def create_user(self, correo, nombreUsuario, password=None, **extra_fields):
-        if not correo:
-            raise ValueError('El usuario debe tener un correo electrónico')
-        correo = self.normalize_email(correo)
-        user = self.model(correo=correo, nombreUsuario=nombreUsuario, **extra_fields)
-        user.set_password(password) # Esto hashea la contraseña automáticamente
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, correo, nombreUsuario, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        return self.create_user(correo, nombreUsuario, password, **extra_fields)
-
-class Usuario(AbstractBaseUser, PermissionsMixin):
-    idUsuario = models.AutoField(primary_key=True)
-    nombreUsuario = models.CharField(max_length=255, unique=True)
-    edad = models.IntegerField(null=True, blank=True)
-    sexo = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], null=True, blank=True)
-    boleta = models.IntegerField(unique=True)
-    correo = models.EmailField(max_length=50, unique=True)
-    
-    # Campos obligatorios para compatibilidad con Django
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-
-    # FKs existentes
-    idRol = models.ForeignKey('Roles', on_delete=models.RESTRICT, db_column='idRol', null=True, blank=True)
-    idCategoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, db_column='idCategoria', null=True, blank=True)
-
-    objects = UsuarioManager()
-
-    USERNAME_FIELD = 'correo'          # Campo para iniciar sesión
-    REQUIRED_FIELDS = ['nombreUsuario', 'boleta'] # Campos para el createsuperuser
-
-    class Meta:
-        db_table = 'usuario' # Mantiene el nombre de tu tabla en Postgres
 
 class Torneo(models.Model):
     idTorneo = models.AutoField(primary_key=True)
@@ -123,10 +114,10 @@ class Inscripciones(models.Model):
     torneo_id = models.ForeignKey(Torneo, on_delete=models.CASCADE, db_column='torneo_id')
     
     # El campo es UNIQUE NOT NULL, pero como FK, usamos OneToOneField y related_name
-    jugador_1_id = models.OneToOneField(Usuario, on_delete=models.RESTRICT, related_name='inscripcion_j1', db_column='jugador_1_id')
+    jugador_1_id = models.OneToOneField(User, on_delete=models.RESTRICT, related_name='inscripcion_j1', db_column='jugador_1_id')
     
     # El campo es UNIQUE (permitiendo NULL), usamos OneToOneField y related_name
-    jugador_2_id = models.OneToOneField(Usuario, on_delete=models.SET_NULL, related_name='inscripcion_j2', db_column='jugador_2_id', null=True, blank=True)
+    jugador_2_id = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='inscripcion_j2', db_column='jugador_2_id', null=True, blank=True)
 
     class Meta:
         db_table = 'inscripciones'

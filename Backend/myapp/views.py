@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .serializer import (CategoriaSerializer, RolesSerializer, FormatoSerializer, UsuarioSerializer, TorneoSerializer, CuadroSerializer, GruposCategoriaSerializer, InscripcionesSerializer, DisponibilidadSerializer, MiembrosGrupoSerializaer, PosicionesGrupoSerializer, PartidoSerializer , SetsSerializer)
+from .serializer import (CategoriaSerializer, RolesSerializer, FormatoSerializer, UserSerializer, TorneoSerializer, CuadroSerializer, GruposCategoriaSerializer, InscripcionesSerializer, DisponibilidadSerializer, MiembrosGrupoSerializaer, PosicionesGrupoSerializer, PartidoSerializer , SetsSerializer)
 from .models import (
-    Categoria, Roles, Formato, Usuario, Torneo, Cuadro, GruposCategoria, 
+    Categoria, Roles, Formato, User, Torneo, Cuadro, GruposCategoria, 
     Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido, Sets
 )
 
@@ -21,8 +21,8 @@ class FormatoViewSet(viewsets.ModelViewSet):
     serializer_class = FormatoSerializer
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
-    serializer_class = UsuarioSerializer
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 class TorneoViewSet(viewsets.ModelViewSet):
     queryset = Torneo.objects.all()

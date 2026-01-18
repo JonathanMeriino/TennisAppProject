@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     "myapp",
 
 ]
-AUTH_USER_MODEL = 'myapp.Usuario'  # Indica a Django que use nuestro modelo de usuario personalizado
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware", # Debe ir lo más arriba posible

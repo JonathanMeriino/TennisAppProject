@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from .models import (
-    Categoria, Roles, Formato, Usuario, Torneo, Cuadro, GruposCategoria, 
+    Categoria, Roles, Formato, Perfil,Torneo, Cuadro, GruposCategoria, 
     Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido, Sets
 )
+from django.contrib.auth.models import User
+
 
 # Serializar categoria
 class CategoriaSerializer (serializers.ModelSerializer):
@@ -23,10 +25,31 @@ class FormatoSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 #Serializer Usuario
-class UsuarioSerializer(serializers.ModelSerializer):
+
+class PerfilSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Usuario
-        fields = '__all__'
+        model = Perfil
+        fields = ['boleta', 'edad', 'sexo', 'idRol', 'idCategoria']
+
+class UserSerializer(serializers.ModelSerializer):
+    # Incrustamos el perfil aquí
+    perfil = PerfilSerializer()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'perfil']
+
+    # Sobreescribimos create para guardar ambas tablas al mismo tiempo
+    def create(self, validated_data):
+        perfil_data = validated_data.pop('perfil') # Sacamos los datos del perfil
+        user = User.objects.create_user(**validated_data) # Creamos el User estándar
+        
+        # Actualizamos el perfil que se creó automáticamente por la Signal
+        for attr, value in perfil_data.items():
+            setattr(user.perfil, attr, value)
+        user.perfil.save()
+        
+        return user
 
 #Serializer Torneo
 
