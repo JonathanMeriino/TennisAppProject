@@ -11,7 +11,7 @@ class Perfil(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     
     # Tus campos personalizados
-    boleta = models.CharField(max_length=20, unique=True)
+    boleta = models.CharField(max_length=20, unique=True, null=True, blank=True)
     edad = models.IntegerField(null=True, blank=True)
     sexo = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], null=True, blank=True)
     
