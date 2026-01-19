@@ -1,10 +1,12 @@
 from django.shortcuts import render
+from rest_framework import permissions
 from rest_framework import viewsets
 from .serializer import (CategoriaSerializer, RolesSerializer, FormatoSerializer, UserSerializer, TorneoSerializer, CuadroSerializer, GruposCategoriaSerializer, InscripcionesSerializer, DisponibilidadSerializer, MiembrosGrupoSerializaer, PosicionesGrupoSerializer, PartidoSerializer , SetsSerializer)
 from .models import (
     Categoria, Roles, Formato, User, Torneo, Cuadro, GruposCategoria, 
     Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido, Sets
 )
+from .permissions import IsAdminUserCustom
 
 # Create your views here.
 
@@ -27,6 +29,15 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 class TorneoViewSet(viewsets.ModelViewSet):
     queryset = Torneo.objects.all()
     serializer_class = TorneoSerializer
+    def get_permissions(self):
+        # Si alguien quiere borrar (DELETE), editar (PUT/PATCH) o crear (POST)
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminUserCustom]
+        else:
+            # Si solo quieren ver (LIST, RETRIEVE)
+            permission_classes = [permissions.IsAuthenticated] # O AllowAny si es público
+            
+        return [permission() for permission in permission_classes]
 
 class CuadroViewSet(viewsets.ModelViewSet):
     queryset = Cuadro.objects.all()
