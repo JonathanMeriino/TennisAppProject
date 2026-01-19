@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Categoria, Roles, Formato, Torneo, Cuadro, GruposCategoria, 
-    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido, Sets
+    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido
 )
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
@@ -42,4 +42,3 @@ admin.site.register(Disponibilidad)
 admin.site.register(MiembrosGrupo)
 admin.site.register(PosicionesGrupo)
 admin.site.register(Partido)
-admin.site.register(Sets)

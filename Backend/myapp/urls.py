@@ -19,7 +19,6 @@ router.register(r'disponibilidad', views.DisponibilidadViweSet)
 router.register(r'miembrosGrupo',views.MiembrosGrupoViewSet)
 router.register(r'posicionesGRupo', views.PosicionesGrupoViewSet)
 router.register(r'partido', views.PartidoViewSet)
-router.register(r'sets', views.SetsViewSet)
 
 
 #Incluye todas las rutas generadas por el Router

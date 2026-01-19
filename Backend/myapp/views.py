@@ -1,10 +1,10 @@
 from django.shortcuts import render
 from rest_framework import permissions
 from rest_framework import viewsets
-from .serializer import (CategoriaSerializer, RolesSerializer, FormatoSerializer, UserSerializer, TorneoSerializer, CuadroSerializer, GruposCategoriaSerializer, InscripcionesSerializer, DisponibilidadSerializer, MiembrosGrupoSerializaer, PosicionesGrupoSerializer, PartidoSerializer , SetsSerializer)
+from .serializer import (CategoriaSerializer, RolesSerializer, FormatoSerializer, UserSerializer, TorneoSerializer, CuadroSerializer, GruposCategoriaSerializer, InscripcionesSerializer, DisponibilidadSerializer, MiembrosGrupoSerializaer, PosicionesGrupoSerializer, PartidoSerializer )
 from .models import (
     Categoria, Roles, Formato, User, Torneo, Cuadro, GruposCategoria, 
-    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido, Sets
+    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido
 )
 from .permissions import IsAdminUserCustom
 
@@ -68,6 +68,3 @@ class PartidoViewSet(viewsets.ModelViewSet):
     queryset = Partido.objects.all()
     serializer_class = PartidoSerializer
 
-class SetsViewSet (viewsets.ModelViewSet):
-    queryset = Sets.objects.all()
-    serializer_class = SetsSerializer

@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+
 from django.db import models
 from django.contrib.auth.models import User # Importa el modelo User de Django
 from django.db.models.signals import post_save
@@ -116,8 +116,6 @@ class Inscripciones(models.Model):
     # El campo es UNIQUE NOT NULL, pero como FK, usamos OneToOneField y related_name
     jugador_1_id = models.OneToOneField(User, on_delete=models.RESTRICT, related_name='inscripcion_j1', db_column='jugador_1_id')
     
-    # El campo es UNIQUE (permitiendo NULL), usamos OneToOneField y related_name
-    jugador_2_id = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='inscripcion_j2', db_column='jugador_2_id', null=True, blank=True)
 
     class Meta:
         db_table = 'inscripciones'
@@ -176,31 +174,30 @@ class PosicionesGrupo(models.Model):
 
 
 class Partido(models.Model):
+    
     idPartido = models.AutoField(primary_key=True)
     estado = models.CharField(max_length=50, null=True, blank=True)
     fechaPartido = models.DateField(null=True, blank=True)
     horaPartido = models.TimeField(null=True, blank=True)
     
+    # NUEVOS CAMPOS: Solo contamos Sets
+    sets_jugador1 = models.IntegerField(default=0, help_text="Sets ganados por jugador 1")
+    sets_jugador2 = models.IntegerField(default=0, help_text="Sets ganados por jugador 2")
+    
     # FKs
     grupo_id = models.ForeignKey(GruposCategoria, on_delete=models.SET_NULL, db_column='grupo_id', null=True, blank=True)
-    ins_a_id = models.ForeignKey(Inscripciones, on_delete=models.RESTRICT, related_name='partidos_a', db_column='ins_a_id')
-    ins_b_id = models.ForeignKey(Inscripciones, on_delete=models.RESTRICT, related_name='partidos_b', db_column='ins_b_id')
-    ganador_ins_id = models.ForeignKey(Inscripciones, on_delete=models.SET_NULL, related_name='partidos_ganados', db_column='ganador_ins_id', null=True, blank=True)
+    ins_a_id = models.ForeignKey(Inscripciones, on_delete=models.RESTRICT, related_name='partidos_j1', db_column='jugador_a_id')
+    ins_b_id = models.ForeignKey(Inscripciones, on_delete=models.RESTRICT, related_name='partidos_j2', db_column='jugador_b_id')
+    #Ganador puede ser null al inicio
+    ganador_ins_id = models.ForeignKey(Inscripciones, on_delete=models.SET_NULL, related_name='partidos_ganados', db_column='Ganador', null=True, blank=True)
 
+    # Estado (para saber si ya se jugó)
+    estado = models.CharField(max_length=20, choices=[('Pendiente', 'Pendiente'), ('Finalizado', 'Finalizado')], default='Pendiente')
+
+    def __str__(self):
+        return f"{self.jugador1} vs {self.jugador2} - Ganador: {self.ganador}"
     class Meta:
         db_table = 'partido'
         verbose_name_plural = "Partidos"
 
 
-class Sets(models.Model):
-    idSets = models.AutoField(primary_key=True)
-    numSet = models.IntegerField(unique=True) 
-    juegos_j1 = models.IntegerField()
-    juegos_j2 = models.IntegerField()
-    
-    # FK (OneToOneField debido a la restricción UNIQUE NOT NULL en partido_id en SQL)
-    partido_id = models.OneToOneField(Partido, on_delete=models.CASCADE, db_column='partido_id')
-
-    class Meta:
-        db_table = 'Sets'
-        verbose_name_plural = "Sets"

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Categoria, Roles, Formato, Perfil,Torneo, Cuadro, GruposCategoria, 
-    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido, Sets
+    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido
 )
 from django.contrib.auth.models import User
 
@@ -101,8 +101,5 @@ class PartidoSerializer(serializers.ModelSerializer):
         model = Partido
         fields = '__all__'
 
-class SetsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Sets
-        fields = '__all__'
+
     
