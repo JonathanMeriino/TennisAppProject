@@ -104,22 +104,31 @@ class GruposCategoria(models.Model):
         verbose_name_plural = "Grupos Categorias"
         # Para forzar la unicidad compuesta, se puede usar: unique_together = (('nombreGrupo', 'torneo_id'),)
 
-
+## tabla intermedia que unira a un "User" con un "Torneo". 
 class Inscripciones(models.Model):
+    #llave primaria original
     idInscripcion = models.AutoField(primary_key=True)
-    estadoIncripcion = models.CharField(max_length=50)
-    fecha_inscripcion = models.DateField(auto_now_add=True)
     
-    # FKs
-    torneo_id = models.ForeignKey(Torneo, on_delete=models.CASCADE, db_column='torneo_id')
+    # campo de estado
+    estado_inscripcion = models.CharField(max_length=50, default='Pendiente')
     
-    # El campo es UNIQUE NOT NULL, pero como FK, usamos OneToOneField y related_name
-    jugador_1_id = models.OneToOneField(User, on_delete=models.RESTRICT, related_name='inscripcion_j1', db_column='jugador_1_id')
+    # fecha 
+    fecha_inscripcion = models.DateTimeField(auto_now_add=True)
     
+    # FK Torneo
+    torneo = models.ForeignKey(Torneo, on_delete=models.CASCADE, related_name='inscripciones', db_column='torneo_id')
+    
+    # FK Jugador
+    jugador = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inscripciones', db_column='jugador_id')
 
     class Meta:
         db_table = 'inscripciones'
         verbose_name_plural = "Inscripciones"
+        # Evita que el jugador se inscriba 2 veces al MISMO torneo
+        unique_together = ('jugador', 'torneo')
+
+    def __str__(self):
+        return f"{self.jugador.username} - Torneo ID: {self.torneo_id} ({self.estado_inscripcion})"
 
 
 class Disponibilidad(models.Model):
@@ -199,5 +208,6 @@ class Partido(models.Model):
     class Meta:
         db_table = 'partido'
         verbose_name_plural = "Partidos"
+
 
 
