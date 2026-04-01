@@ -72,10 +72,69 @@ class GruposCategoriaSerializer(serializers.ModelSerializer):
 
 #Serializer Inscripciones
 class InscripcionesSerializer(serializers.ModelSerializer):
+    # Campos de "Solo Lectura" para que el Frontend muestre texto, no solo IDs
+    nombre_jugador = serializers.CharField(source='jugador.username', read_only=True)
+    nombre_torneo = serializers.CharField(source='torneo.nombre', read_only=True)
+
     class Meta:
         model = Inscripciones
-        fields = '__all__'
+        # listamos los campos explícitamente para incluir los nuevos
+        fields = [
+            'idInscripcion', 
+            'jugador', 'nombre_jugador', 
+            'torneo', 'nombre_torneo', 
+            'estado_inscripcion', 
+            'fecha_inscripcion'
+        ]
+        # Evitamos que el usuario edite estos campos al hacer un POST/PUT
+        read_only_fields = ['estado_inscripcion', 'fecha_inscripcion']
 
+    # REGLAS DE NEGOCIO:
+    def validate(self, data):
+        jugador = data.get('jugador')
+        torneo = data.get('torneo')
+
+        # 1. Validar que el perfil exista
+        if not hasattr(jugador, 'perfil'):
+            raise serializers.ValidationError({
+                "jugador": "Debes completar tu perfil (sexo, categoría, etc.) antes de inscribirte."
+            })
+
+        perfil = jugador.perfil
+
+        # --- REGLA 2: VALIDACIÓN DE RAMA (SEXO) ---
+        # Asumimos que perfil.sexo guarda 'Masculino' o 'Femenino'
+        # Asumimos que torneo.rama guarda 'Varonil', 'Femenil' o 'Mixto'
+        
+        rama_torneo = torneo.rama  
+        sexo_jugador = perfil.sexo
+
+        if rama_torneo == 'Varonil' and sexo_jugador != 'Masculino':
+            raise serializers.ValidationError({
+                "rama": "No puedes inscribirte. Este torneo es exclusivo para la rama Varonil."
+            })
+            
+        elif rama_torneo == 'Femenil' and sexo_jugador != 'Femenino':
+            raise serializers.ValidationError({
+                "rama": "No puedes inscribirte. Este torneo es exclusivo para la rama Femenil."
+            })
+        # Si es 'Mixto', pasa directo sin importar el sexo.
+
+
+        # --- REGLA 3: VALIDACIÓN DE CATEGORÍA (NIVEL) ---
+        # Asumimos que tanto el torneo como el perfil tienen un campo 'categoria' (ej. 'A', 'B', 'Principiante')
+        
+        categoria_torneo = Categoria.nombreCategoria
+        categoria_jugador = Categoria.nombreCategoria
+
+        # Evita que un Principiante entre a la categoría 'A' o viceversa
+        if categoria_torneo != categoria_jugador:
+            raise serializers.ValidationError({
+                "categoria": f"Inscripción rechazada. El torneo es categoría '{categoria_torneo}', pero tu perfil es '{categoria_jugador}'."
+            })
+
+        return data
+    
 #Serializer disponibilidad
 class DisponibilidadSerializer (serializers.ModelSerializer):
     class Meta:
