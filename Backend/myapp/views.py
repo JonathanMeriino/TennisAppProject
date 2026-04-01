@@ -48,8 +48,23 @@ class GruposCategoriaViewSet(viewsets.ModelViewSet):
     serializer_class = GruposCategoriaSerializer
 
 class InscripcionesViewSet(viewsets.ModelViewSet):
-    queryset = Inscripciones.objects.all()
+    # Le decimos qué serializador usar
     serializer_class = InscripcionesSerializer
+    
+    # Solo usuarios logueados pueden entrar aquí
+    permission_classes = [permissions.IsAuthenticated]
+
+    # ¿Qué lista de inscripciones devolvemos al hacer un GET?
+    def get_queryset(self):
+        user = self.request.user
+        
+        # Si es el Superusuario o un Administrador
+        if user.is_superuser or (hasattr(user, 'perfil') and user.perfil.idRol and user.perfil.idRol.nombreRol == 'Administrador'):
+            # Devuelve TODAS las inscripciones de todos los torneos
+            return Inscripciones.objects.all()
+        
+        # Si es un jugador normal, SOLO le devolvemos las suyas
+        return Inscripciones.objects.filter(jugador=user)
 
 class DisponibilidadViweSet(viewsets.ModelViewSet):
     queryset = Disponibilidad.objects.all()
