@@ -14,7 +14,7 @@ router.register(r'usuario',views.UsuarioViewSet)
 router.register(r'torneo', views.TorneoViewSet)
 router.register(r'cuadro', views.CuadroViewSet)
 router.register(r'gruposCategoria', views.GruposCategoriaViewSet)
-router.register(r'inscripciones',views.InscripcionesViewSet)
+router.register(r'inscripciones',views.InscripcionesViewSet, basename='inscripciones') # Le damos un basename porque no hay un queryset definido en el viewset
 router.register(r'disponibilidad', views.DisponibilidadViweSet)
 router.register(r'miembrosGrupo',views.MiembrosGrupoViewSet)
 router.register(r'posicionesGRupo', views.PosicionesGrupoViewSet)
