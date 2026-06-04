@@ -1,16 +1,10 @@
 from rest_framework import serializers
 from .models import (
-    Categoria, Roles, Formato, Perfil,Torneo, Cuadro, GruposCategoria, 
-    Inscripciones, Disponibilidad, MiembrosGrupo, PosicionesGrupo, Partido
+    Perfil, Roles, Torneo, Inscripcion, Partido, Resultado
 )
 from django.contrib.auth.models import User
 
 
-# Serializar categoria
-class CategoriaSerializer (serializers.ModelSerializer):
-    class Meta:
-        model = Categoria
-        fields = '__all__'
 
 #Serializaer Roles
 class RolesSerializer (serializers.ModelSerializer):
@@ -19,10 +13,7 @@ class RolesSerializer (serializers.ModelSerializer):
         fields = '__all__'
 
 #Serializer formato
-class FormatoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Formato
-        fields = '__all__'
+
 
 #Serializer Usuario
 
@@ -58,17 +49,7 @@ class TorneoSerializer (serializers.ModelSerializer):
         model = Torneo
         fields = '__all__'
 
-#Serializer Cuadro
-class CuadroSerializer (serializers.ModelSerializer):
-    class Meta:
-        model = Cuadro 
-        fields = '__all__'
 
-#Serializer GruposCategoria
-class GruposCategoriaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GruposCategoria
-        fields = '__all__'
 
 #Serializer Inscripciones
 class InscripcionesSerializer(serializers.ModelSerializer):
@@ -77,7 +58,7 @@ class InscripcionesSerializer(serializers.ModelSerializer):
     nombre_torneo = serializers.CharField(source='torneo.nombre', read_only=True)
 
     class Meta:
-        model = Inscripciones
+        model = Inscripcion
         # listamos los campos explícitamente para incluir los nuevos
         fields = [
             'idInscripcion', 
@@ -124,34 +105,14 @@ class InscripcionesSerializer(serializers.ModelSerializer):
         # --- REGLA 3: VALIDACIÓN DE CATEGORÍA (NIVEL) ---
         # Asumimos que tanto el torneo como el perfil tienen un campo 'categoria' (ej. 'A', 'B', 'Principiante')
         
-        categoria_torneo = Categoria.nombreCategoria
-        categoria_jugador = Categoria.nombreCategoria
+        
 
-        # Evita que un Principiante entre a la categoría 'A' o viceversa
-        if categoria_torneo != categoria_jugador:
-            raise serializers.ValidationError({
-                "categoria": f"Inscripción rechazada. El torneo es categoría '{categoria_torneo}', pero tu perfil es '{categoria_jugador}'."
-            })
-
-        return data
+        
     
 #Serializer disponibilidad
-class DisponibilidadSerializer (serializers.ModelSerializer):
-    class Meta:
-        model = Disponibilidad
-        fields = '__all__'
 
-#Serializer MiembrosGrupo
-class MiembrosGrupoSerializaer(serializers.ModelSerializer):
-    class Meta:
-        model = MiembrosGrupo
-        fields = '__all__'
-#Serializer PosicionesGrupo
 
-class PosicionesGrupoSerializer (serializers.ModelSerializer):
-    class Meta:
-        model = PosicionesGrupo
-        fields = '__all__'
+
 
 #Serializer Partido
 
