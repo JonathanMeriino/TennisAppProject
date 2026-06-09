@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Perfil, Roles, Torneo, Inscripcion, Partido, Resultado
+    Categoria,Perfil, Roles, Torneo, Inscripcion, Partido, Resultado
 )
 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -26,16 +26,8 @@ admin.site.register(User, UserAdmin)
 # Registro simple de las tablas sin personalización
 
 admin.site.register(Roles)
-
-
-# --- 2. Tablas Principales ---
-
+admin.site.register(Categoria)
 admin.site.register(Torneo)
-
-
-# --- 3. Tablas de Relación y Movimiento ---
-
 admin.site.register(Inscripcion)
-
 admin.site.register(Partido)
 admin.site.register(Resultado)

@@ -1,10 +1,21 @@
 from rest_framework import serializers
 from .models import (
-    Perfil, Roles, Torneo, Inscripcion, Partido, Resultado
+    Categoria, Perfil, Roles, Torneo, Inscripcion, Partido, Resultado
 )
 from django.contrib.auth.models import User
 
+#Serializer Categoria
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = '__all__'
+#Serializer Torneo
+class TorneoSerializer(serializers.ModelSerializer):
+    nombre_categoria = serializers.CharField(source='categoria.nombre_categoria', read_only=True)
 
+    class Meta:
+        model = Torneo
+        fields = '__all__'
 
 #Serializaer Roles
 class RolesSerializer (serializers.ModelSerializer):
@@ -12,7 +23,6 @@ class RolesSerializer (serializers.ModelSerializer):
         model = Roles 
         fields = '__all__'
 
-#Serializer formato
 
 
 #Serializer Usuario
@@ -42,12 +52,6 @@ class UserSerializer(serializers.ModelSerializer):
         
         return user
 
-#Serializer Torneo
-
-class TorneoSerializer (serializers.ModelSerializer):
-    class Meta:
-        model = Torneo
-        fields = '__all__'
 
 
 
@@ -59,14 +63,8 @@ class InscripcionesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Inscripcion
-        # listamos los campos explícitamente para incluir los nuevos
-        fields = [
-            'idInscripcion', 
-            'jugador', 'nombre_jugador', 
-            'torneo', 'nombre_torneo', 
-            'estado_inscripcion', 
-            'fecha_inscripcion'
-        ]
+        
+        fields = '__all__'
         # Evitamos que el usuario edite estos campos al hacer un POST/PUT
         read_only_fields = ['estado_inscripcion', 'fecha_inscripcion']
 
@@ -87,39 +85,32 @@ class InscripcionesSerializer(serializers.ModelSerializer):
         # Asumimos que perfil.sexo guarda 'Masculino' o 'Femenino'
         # Asumimos que torneo.rama guarda 'Varonil', 'Femenil' o 'Mixto'
         
-        rama_torneo = torneo.rama  
-        sexo_jugador = perfil.sexo
+        # Validación de Rama (Sexo)
+        if torneo.rama_torneo == 'Varonil' and perfil.sexo_usuario != 'M':
+            raise serializers.ValidationError({"rama": "Inscripción rechazada. El torneo está restringido a la rama Varonil."})
+        elif torneo.rama_torneo == 'Femenil' and perfil.sexo_usuario != 'F':
+            raise serializers.ValidationError({"rama": "Inscripción rechazada. El torneo está restringido a la rama Femenil."})
 
-        if rama_torneo == 'Varonil' and sexo_jugador != 'Masculino':
+        # Validación de Categoría Relacional
+        if torneo.categoria != perfil.categoria:
             raise serializers.ValidationError({
-                "rama": "No puedes inscribirte. Este torneo es exclusivo para la rama Varonil."
+                "categoria": f"El nivel del torneo es '{torneo.categoria.nombre_categoria}', pero tu perfil es '{perfil.categoria.nombre_categoria if perfil.categoria else 'Sin Categoría'}'."
             })
-            
-        elif rama_torneo == 'Femenil' and sexo_jugador != 'Femenino':
-            raise serializers.ValidationError({
-                "rama": "No puedes inscribirte. Este torneo es exclusivo para la rama Femenil."
-            })
-        # Si es 'Mixto', pasa directo sin importar el sexo.
 
-
-        # --- REGLA 3: VALIDACIÓN DE CATEGORÍA (NIVEL) ---
-        # Asumimos que tanto el torneo como el perfil tienen un campo 'categoria' (ej. 'A', 'B', 'Principiante')
-        
-        
-
-        
-    
-#Serializer disponibilidad
-
-
-
+        return data
 
 #Serializer Partido
-
 class PartidoSerializer(serializers.ModelSerializer):
+    username_j1 = serializers.CharField(source='jugador1.jugador.username', read_only=True)
+    username_j2 = serializers.CharField(source='jugador2.jugador.username', read_only=True)
+
     class Meta:
         model = Partido
         fields = '__all__'
 
+class ResultadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Resultado
+        fields = '__all__'
 
     
