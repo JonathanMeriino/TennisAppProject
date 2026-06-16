@@ -30,7 +30,7 @@ class RolesSerializer (serializers.ModelSerializer):
 class PerfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Perfil
-        fields = ['boleta', 'edad', 'sexo', 'idRol', 'idCategoria']
+        fields = ['boleta_usuario', 'edad_usuario', 'sexo_usuario', 'rol', 'categoria']
 
 class UserSerializer(serializers.ModelSerializer):
     # Incrustamos el perfil aquí
