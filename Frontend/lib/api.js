@@ -1,0 +1,184 @@
+// ---------------------------------------------------------------------------
+// Cliente central de API para conectar con tu backend REST (JWT Bearer).
+//
+// Configura la URL de tu backend con la variable de entorno NEXT_PUBLIC_API_URL
+// (ver .env.local). Por defecto usa http://localhost:8000.
+//
+// ENDPOINTS ESPERADOS (rutas REST estándar que asume el frontend):
+//   POST   /api/auth/register           -> { token, user }
+//   POST   /api/auth/login              -> { token, user }
+//   GET    /api/auth/me                 -> user
+//   PUT    /api/auth/me                 -> user
+//   GET    /api/tournaments             -> [ tournament, ... ]
+//   POST   /api/tournaments             -> tournament        (multipart/form-data con Excel)
+//   POST   /api/tournaments/join        -> { id }            body: { code }
+//   GET    /api/tournaments/:id         -> tournament
+//   GET    /api/tournaments/:id/groups  -> [ group, ... ]
+//   GET    /api/tournaments/:id/matches -> [ match, ... ]
+//   POST   /api/tournaments/:id/matches/:matchId/result -> match
+//
+// Ajusta las rutas de abajo si tu backend usa otras.
+// ---------------------------------------------------------------------------
+
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+const TOKEN_KEY = "tournify_token";
+
+// --- Manejo del token JWT --------------------------------------------------
+
+export function getToken() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token) {
+  if (typeof window === "undefined") return;
+  if (token) {
+    window.localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    window.localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export function clearToken() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(TOKEN_KEY);
+}
+
+export function isAuthenticated() {
+  return Boolean(getToken());
+}
+
+// --- Fetch base con manejo de errores y token ------------------------------
+
+async function request(path, { method = "GET", body, headers = {}, isForm = false } = {}) {
+  const token = getToken();
+  const finalHeaders = { ...headers };
+
+  if (token) {
+    finalHeaders.Authorization = `Bearer ${token}`;
+  }
+
+  let payload = body;
+  if (body && !isForm) {
+    finalHeaders["Content-Type"] = "application/json";
+    payload = JSON.stringify(body);
+  }
+
+  let res;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: finalHeaders,
+      body: payload,
+    });
+  } catch (err) {
+    throw new Error(
+      "No se pudo conectar con el servidor. Verifica que tu backend esté corriendo en " +
+        API_URL,
+    );
+  }
+
+  // Sesión expirada / no autorizado
+  if (res.status === 401) {
+    clearToken();
+    throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
+  }
+
+  let data = null;
+  const text = await res.text();
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!res.ok) {
+    const message =
+      (data && (data.message || data.detail || data.error)) ||
+      `Error ${res.status}`;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+// --- Autenticación ---------------------------------------------------------
+
+export const auth = {
+  async register(data) {
+    const result = await request("/api/auth/register", {
+      method: "POST",
+      body: data,
+    });
+    if (result?.token) setToken(result.token);
+    return result;
+  },
+
+  async login(email, password) {
+    const result = await request("/api/auth/login", {
+      method: "POST",
+      body: { email, password },
+    });
+    if (result?.token) setToken(result.token);
+    return result;
+  },
+
+  async me() {
+    return request("/api/auth/me");
+  },
+
+  async updateProfile(data) {
+    return request("/api/auth/me", { method: "PUT", body: data });
+  },
+
+  logout() {
+    clearToken();
+  },
+};
+
+// --- Torneos ---------------------------------------------------------------
+
+export const tournaments = {
+  async list() {
+    return request("/api/tournaments");
+  },
+
+  async get(id) {
+    return request(`/api/tournaments/${id}`);
+  },
+
+  // formData: FormData con los campos del torneo + el archivo Excel
+  async create(formData) {
+    return request("/api/tournaments", {
+      method: "POST",
+      body: formData,
+      isForm: true,
+    });
+  },
+
+  async join(code) {
+    return request("/api/tournaments/join", {
+      method: "POST",
+      body: { code },
+    });
+  },
+
+  async groups(id) {
+    return request(`/api/tournaments/${id}/groups`);
+  },
+
+  async matches(id) {
+    return request(`/api/tournaments/${id}/matches`);
+  },
+
+  async reportResult(tournamentId, matchId, result) {
+    return request(
+      `/api/tournaments/${tournamentId}/matches/${matchId}/result`,
+      { method: "POST", body: result },
+    );
+  },
+};
