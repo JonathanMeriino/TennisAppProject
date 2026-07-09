@@ -131,3 +131,11 @@ class ResultadoViewSet(viewsets.ModelViewSet):
             elif sig_partido.jugador2 is None:
                 sig_partido.jugador2 = ganador
             sig_partido.save()
+
+## Prueba 
+from django.http import JsonResponse
+def prueba_conexion(request):
+
+    return JsonResponse({
+        "status":"ok",
+        "mensaje":"Conexión exitosa con el backend de Django"})
