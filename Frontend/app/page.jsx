@@ -1,36 +1,39 @@
-"use client";
+"use client";// Obligatorio para manejar formularios y clics
 
-import Link from "next/link";
-import { useState } from "react";
-import { auth } from "@/lib/api";
+import Link from "next/link"; // Importa el componente Link de Next.js para la navegación entre páginas
+import { useState } from "react"; //UN hook de REact que permite crear y actualizar variables de estado dentro del componente
+import { auth } from "@/lib/api"; //Un servicio o modulo personalizado que contiene la logica para conectarse con el servidor
 
+// Componente de página de inicio de sesión
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState(""); // Estado para almacenar el correo electrónico ingresado por el usuario
+  const [password, setPassword] = useState(""); // Estado para almacenar la contraseña ingresada por el usuario
+  const [loading, setLoading] = useState(false); // Estado para indicar si se está procesando la solicitud de inicio de sesión
+  const [error, setError] = useState(""); // Estado para almacenar mensajes de error relacionados con el inicio de sesión
 
+  // Función para manejar el evento de envío del formulario de inicio de sesión
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
+    e.preventDefault(); // Evita que la página se recargue al enviar el formulario
+    setError(""); // Limpia cualquier mensaje de error previo
 
     if (!email || !password) {
+      // Verifica que ambos campos estén completos. Si falta alguno, muestra el error
       setError("Por favor completa todos los campos");
       return;
     }
-
-    setLoading(true);
-    try {
-      await auth.login(email, password);
-      window.location.href = "/dashboard";
-    } catch (err) {
-      setError(err.message || "Credenciales inválidas. Intenta de nuevo.");
-    } finally {
+    
+    setLoading(true); // Indica que se está procesando la solicitud de inicio de sesión
+    try { // Exitos
+      await auth.login(email, password); // Llama a la funcion para validar las credenciales en el servidor y espera la respuesta
+      window.location.href = "/dashboard"; // Si las credenciales son correctas, redirige al usuario al dashboard
+    } catch (err) { //Errors
+      setError(err.message || "Credenciales inválidas. Intenta de nuevo."); // Si ocurre un error, muestra un mensaje de error al usuario
+    } finally { // Se ejecuta siempre, sin importar si hubo exitio o error, para indicar que la solicitud ha terminados
       setLoading(false);
     }
   };
-
-  return (
+  // Renderiza el contenido de la página de inicio de sesión
+  return ( 
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
