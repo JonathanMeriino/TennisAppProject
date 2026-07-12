@@ -29,7 +29,6 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nombre_categoria
 
-
 # ==========================================
 # 2. PERFIL DEL USUARIO
 # ==========================================
