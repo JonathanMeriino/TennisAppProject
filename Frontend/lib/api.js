@@ -144,16 +144,16 @@ export const auth = {
 
 export const tournaments = {
   async list() {
-    return request("/api/tournaments");
+    return request("/api/torneo");
   },
 
   async get(id) {
-    return request(`/api/tournaments/${id}`);
+    return request(`/api/torneo/${id}`);
   },
 
   // formData: FormData con los campos del torneo + el archivo Excel
   async create(formData) {
-    return request("/api/tournaments", {
+    return request("/api/torneo", {
       method: "POST",
       body: formData,
       isForm: true,
@@ -161,23 +161,23 @@ export const tournaments = {
   },
 
   async join(code) {
-    return request("/api/tournaments/join", {
+    return request("/api/torneo/join", {
       method: "POST",
       body: { code },
     });
   },
 
   async groups(id) {
-    return request(`/api/tournaments/${id}/groups`);
+    return request(`/api/torneo/${id}/groups`);
   },
 
   async matches(id) {
-    return request(`/api/tournaments/${id}/matches`);
+    return request(`/api/torneo/${id}/matches`);
   },
 
   async reportResult(tournamentId, matchId, result) {
     return request(
-      `/api/tournaments/${tournamentId}/matches/${matchId}/result`,
+      `/api/torneo/${tournamentId}/matches/${matchId}/result`,
       { method: "POST", body: result },
     );
   },
