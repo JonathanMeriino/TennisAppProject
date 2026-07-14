@@ -53,7 +53,7 @@ export function isAuthenticated() {
 }
 
 // --- Fetch base con manejo de errores y token ------------------------------
-
+/*
 async function request(path, { method = "GET", body, headers = {}, isForm = false } = {}) {
   const token = getToken();
   const finalHeaders = { ...headers };
@@ -106,6 +106,27 @@ async function request(path, { method = "GET", body, headers = {}, isForm = fals
   }
 
   return data;
+}*/
+// Ajusta esto en tu archivo donde definiste la función 'request'
+async function request(url, options = {}) {
+  const token = localStorage.getItem("access_token"); // O el nombre que uses
+  
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  // Si tenemos un token, lo agregamos a la cabecera Authorization
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`http://localhost:8000${url}`, {
+    ...options,
+    headers,
+  });
+
+  return response.json();
 }
 
 // --- Autenticación ---------------------------------------------------------
@@ -120,12 +141,14 @@ export const auth = {
     return result;
   },
 
-  async login(email, password) {
+  async login(username, password) {
     const result = await request("/api/auth/login", {
       method: "POST",
-      body: { email, password },
+      body: JSON.stringify({ username, password }),
     });
-    if (result?.token) setToken(result.token);
+    if (result?.access) {
+      localStorage.setItem("access_token", result.access);
+    }
     return result;
   },
 
