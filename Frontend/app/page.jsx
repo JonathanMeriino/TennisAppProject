@@ -1,39 +1,58 @@
-"use client";// Obligatorio para manejar formularios y clics
+"use client";
 
-import Link from "next/link"; // Importa el componente Link de Next.js para la navegación entre páginas
-import { useState } from "react"; //UN hook de REact que permite crear y actualizar variables de estado dentro del componente
-import { auth } from "@/lib/api"; //Un servicio o modulo personalizado que contiene la logica para conectarse con el servidor
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-// Componente de página de inicio de sesión
 export default function LoginPage() {
-  const [email, setEmail] = useState(""); // Estado para almacenar el correo electrónico ingresado por el usuario
-  const [password, setPassword] = useState(""); // Estado para almacenar la contraseña ingresada por el usuario
-  const [loading, setLoading] = useState(false); // Estado para indicar si se está procesando la solicitud de inicio de sesión
-  const [error, setError] = useState(""); // Estado para almacenar mensajes de error relacionados con el inicio de sesión
+  const router = useRouter();
 
-  // Función para manejar el evento de envío del formulario de inicio de sesión
+  // Estados adaptados a tu nomenclatura
+  // Usamos 'username' para el estado porque es lo que Django espera recibir
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const handleLogin = async (e) => {
-    e.preventDefault(); // Evita que la página se recargue al enviar el formulario
-    setError(""); // Limpia cualquier mensaje de error previo
+    e.preventDefault();
+    setLoading(true);
+    setError(""); // Limpiamos cualquier error anterior
 
-    if (!email || !password) {
-      // Verifica que ambos campos estén completos. Si falta alguno, muestra el error
-      setError("Por favor completa todos los campos");
-      return;
-    }
-    
-    setLoading(true); // Indica que se está procesando la solicitud de inicio de sesión
-    try { // Exitos
-      await auth.login(email, password); // Llama a la funcion para validar las credenciales en el servidor y espera la respuesta
-      window.location.href = "/dashboard"; // Si las credenciales son correctas, redirige al usuario al dashboard
-    } catch (err) { //Errors
-      setError(err.message || "Credenciales inválidas. Intenta de nuevo."); // Si ocurre un error, muestra un mensaje de error al usuario
-    } finally { // Se ejecuta siempre, sin importar si hubo exitio o error, para indicar que la solicitud ha terminados
+    try {
+      const respuesta = await fetch("http://localhost:8000/api/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username, // Mandamos el usuario a Django
+          password: password,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (respuesta.ok) {
+        // Guardamos los tokens en el navegador
+        localStorage.setItem("access_token", datos.access);
+        if (datos.refresh) {
+          localStorage.setItem("refresh_token", datos.refresh);
+        }
+        
+        // Redirigimos al panel
+        router.push("/dashboard"); 
+      } else {
+        setError("Usuario o contraseña incorrectos.");
+        setLoading(false);
+      }
+    } catch (err) {
+      setError("Error de conexión con el servidor.");
       setLoading(false);
     }
   };
-  // Renderiza el contenido de la página de inicio de sesión
-  return ( 
+
+  return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
@@ -58,18 +77,19 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="usuario"
                   className="block text-sm font-medium text-foreground mb-2"
                 >
-                  Correo Electrónico
+                  Usuario
                 </label>
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="usuario"
+                  type="text" // Cambiado a text por si usan un nombre de usuario en lugar de correo
+                  placeholder="Tu usuario o correo"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="input-field"
+                  required
                 />
               </div>
 
@@ -87,9 +107,11 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="input-field"
+                  required
                 />
               </div>
 
+              {/* Manejo de errores respetando tus clases de Tailwind */}
               {error && (
                 <div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
                   {error}
