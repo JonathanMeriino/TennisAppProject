@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 // Asegúrate de exportar la función exactamente con el nombre que importas en page.jsx
-export void function RegistroForm() {
+export default function RegistroForm() {
   const router = useRouter();
 
   // 1. Estados para el modelo nativo User de Django
