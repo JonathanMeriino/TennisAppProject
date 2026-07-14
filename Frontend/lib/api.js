@@ -47,7 +47,9 @@ export function clearToken() {
 }
 
 export function isAuthenticated() {
-  return Boolean(getToken());
+  const token = localStorage.getItem("access_token");
+  console.log("Token en isAuthenticated:", token);
+  return !!token;
 }
 
 // --- Fetch base con manejo de errores y token ------------------------------
