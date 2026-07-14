@@ -16,7 +16,9 @@ export default function RegistroForm() {
   const [boleta, setBoleta] = useState("");
   const [edad, setEdad] = useState("");
   const [sexo, setSexo] = useState("");
-
+  // Estados para las llaves foraneas
+  const [rol,setRol] = useState("");
+  const [categoria,setCategoria] = useState("");
   // Estados para manejar el botón de carga y mensajes al usuario
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -35,7 +37,9 @@ export default function RegistroForm() {
       perfil: {
         boleta_usuario: boleta,
         edad_usuario: edad ? parseInt(edad) : null, 
-        sexo_usuario: sexo
+        sexo_usuario: sexo,
+        rol: rol ? parseInt(rol) : null,
+        categoria: categoria ? parseInt(categoria) : null,
       }
     };
 
@@ -134,6 +138,32 @@ export default function RegistroForm() {
             <option value="">Sexo...</option>
             <option value="M">Masculino</option>
             <option value="F">Femenino</option>
+          </select>
+        </div>
+        <div className="flex gap-4 mt-3">
+          <select
+            value={rol}
+            onChange={(e) => setRol(e.target.value)}
+            className="w-1/2 border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <option value="">Selecciona un Rol...</option>
+            {/* Los values deben coincidir con los IDs en tu tabla de PostgreSQL */}
+            <option value="1">Administrador</option>
+            <option value="2">Jugador</option>
+          </select>
+
+          <select
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            className="w-1/2 border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <option value="">Categoría...</option>
+            {/* Los values deben coincidir con los IDs en tu tabla de PostgreSQL */}
+            <option value="1">Principiante</option>
+            <option value="2">Clase D</option>
+            <option value="3">Clase C</option>
+            <option value="4">Clase B</option>
+            <option value="5">Clase A</option>
           </select>
         </div>
       </div>
