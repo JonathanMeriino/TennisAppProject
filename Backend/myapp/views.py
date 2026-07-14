@@ -10,7 +10,18 @@ from .models import (
 from .permissions import IsAdminUserCustom
 
 # Create your views here.
+class GetUserViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get (self,request):
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response({
+            "username":user.username,
+            "email":user.email,
+            "boleta":user.perfil.boleta_usuario if hasattr(user, 'perfil') else None,
+        
+        })
 
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()

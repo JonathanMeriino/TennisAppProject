@@ -17,5 +17,6 @@ router.register(r'partido', views.PartidoViewSet)
 
 #Incluye todas las rutas generadas por el Router
 urlpatterns = [
-    path('',include(router.urls))
+    path('',include(router.urls)),
+    path('auth/me',views.GetUserViewSet.as_view({"get": "get"}), name='get_user'),
 ]
