@@ -62,7 +62,7 @@ export function RegistroForm() {
             boleta_usuario: formData.boleta,
             edad_usuario: parseInt(formData.age),
             sexo_usuario: formData.sexo,
-            rol: 1,
+            rol: 2,
             categoria: parseInt(formData.category)
           }
         }),
