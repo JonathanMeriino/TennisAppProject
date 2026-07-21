@@ -1,181 +1,43 @@
-"use client";
+import Link from "next/link";
+import { RegistroForm } from "@/components/registro-form";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-// Asegúrate de exportar la función exactamente con el nombre que importas en page.jsx
-export default function RegistroForm() {
-  const router = useRouter();
-
-  // 1. Estados para el modelo nativo User de Django
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // 2. Estados para tu modelo Perfil personalizado
-  const [boleta, setBoleta] = useState("");
-  const [edad, setEdad] = useState("");
-  const [sexo, setSexo] = useState("");
-  // Estados para las llaves foraneas
-  const [rol,setRol] = useState("");
-  const [categoria,setCategoria] = useState("");
-  // Estados para manejar el botón de carga y mensajes al usuario
-  const [mensaje, setMensaje] = useState("");
-  const [cargando, setCargando] = useState(false);
-
-  // 3. Función principal para enviar los datos a Django
-  const manejarRegistro = async (e) => {
-    e.preventDefault(); // Evita que se recargue la página
-    setCargando(true);
-    setMensaje(""); // Limpiamos mensajes anteriores
-
-    // Construimos el JSON anidado que espera Django para llenar las dos tablas
-    const payload = {
-      username: username,
-      email: email,
-      password: password,
-      perfil: {
-        boleta_usuario: boleta,
-        edad_usuario: edad ? parseInt(edad) : null, 
-        sexo_usuario: sexo,
-        rol: rol ? parseInt(rol) : null,
-        categoria: categoria ? parseInt(categoria) : null,
-      }
-    };
-
-    try {
-      // Hacemos el POST a tu ViewSet de usuarios
-      const respuesta = await fetch("http://localhost:8000/api/usuario/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (respuesta.ok) {
-        // Si PostgreSQL guarda todo bien, redirigimos al login o al dashboard
-        router.push("/"); 
-      } else {
-        const errores = await respuesta.json();
-        console.error("Errores desde Django:", errores);
-        setMensaje("Revisa los datos. Es posible que el correo o la boleta ya estén registrados.");
-        setCargando(false);
-      }
-    } catch (error) {
-      console.error("Fallo la conexión:", error);
-      setMensaje("Error de red. Verifica que el servidor de Django esté corriendo.");
-      setCargando(false);
-    }
-  };
-
+export default function RegistroPage() {
   return (
-    <form onSubmit={manejarRegistro} className="flex flex-col gap-4 w-full">
-      
-      {/* Alerta de error si algo falla */}
-      {mensaje && (
-        <div className="bg-red-50 text-red-600 p-3 rounded text-sm border border-red-200">
-          {mensaje}
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4 max-w-7xl">
+          <h1 className="text-2xl font-bold text-primary">Tournify</h1>
         </div>
-      )}
+      </header>
 
-      {/* --- CAMPOS DEL USUARIO --- */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Credenciales de Acceso
-        </h3>
-        <input
-          type="text"
-          placeholder="Nombre de usuario"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          className="w-full border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        />
-        <input
-          type="email"
-          placeholder="Correo electrónico"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        />
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-2xl">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-foreground mb-2">
+              Crear Cuenta
+            </h2>
+            <p className="text-muted-foreground">
+              Regístrate para participar en nuestros torneos de tenis
+            </p>
+          </div>
 
-      {/* --- CAMPOS DEL PERFIL --- */}
-      <div className="space-y-3 mt-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Datos del Jugador
-        </h3>
-        <input
-          type="text"
-          placeholder="Número de Boleta (Ej. 2026123456)"
-          value={boleta}
-          onChange={(e) => setBoleta(e.target.value)}
-          className="w-full border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        />
-        <div className="flex gap-4">
-          <input
-            type="number"
-            placeholder="Edad"
-            value={edad}
-            onChange={(e) => setEdad(e.target.value)}
-            className="w-1/2 border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          />
-          <select
-            value={sexo}
-            onChange={(e) => setSexo(e.target.value)}
-            className="w-1/2 border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <option value="">Sexo...</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-          </select>
+          <RegistroForm />
+
+          <div className="mt-6 text-center text-sm">
+            <p className="text-muted-foreground">
+              ¿Ya tienes una cuenta?{" "}
+              <Link
+                href="/"
+                className="font-semibold text-primary hover:text-primary/80"
+              >
+                Inicia sesión aquí
+              </Link>
+            </p>
+          </div>
         </div>
-        <div className="flex gap-4 mt-3">
-          <select
-            value={rol}
-            onChange={(e) => setRol(e.target.value)}
-            className="w-1/2 border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <option value="">Selecciona un Rol...</option>
-            {/* Los values deben coincidir con los IDs en tu tabla de PostgreSQL */}
-            <option value="1">Administrador</option>
-            <option value="2">Jugador</option>
-          </select>
-
-          <select
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
-            className="w-1/2 border border-input bg-background px-3 py-2 rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <option value="">Categoría...</option>
-            {/* Los values deben coincidir con los IDs en tu tabla de PostgreSQL */}
-            <option value="1">Principiante</option>
-            <option value="2">Clase D</option>
-            <option value="3">Clase C</option>
-            <option value="4">Clase B</option>
-            <option value="5">Clase A</option>
-          </select>
-        </div>
-      </div>
-
-      {/* --- BOTÓN DE ENVÍO --- */}
-      <button
-        type="submit"
-        disabled={cargando}
-        className="w-full bg-primary text-primary-foreground font-medium px-4 py-2 rounded-md mt-6 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {cargando ? "Procesando Registro..." : "Completar Registro"}
-      </button>
-    </form>
+      </main>
+    </div>
   );
 }
