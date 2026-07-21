@@ -38,12 +38,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'perfil']
+        fields = ['id', 'username', 'email','password', 'first_name', 'last_name', 'perfil']
+        # Añadimos esta linea para que la contraseña sea segura y no viaje de regreso
+        extra_kwargs = {'password': {'write_only': True}}
 
     # Sobreescribimos create para guardar ambas tablas al mismo tiempo
     def create(self, validated_data):
         perfil_data = validated_data.pop('perfil') # Sacamos los datos del perfil
-        user = User.objects.create_user(**validated_data) # Creamos el User estándar
+
+        password = validated_data.pop('password')  # Extraemos la contraseña si está presente
+        user = User.objects.create_user(password=password, **validated_data) # Creamos el User estándar
         
         # Actualizamos el perfil que se creó automáticamente por la Signal
         for attr, value in perfil_data.items():
