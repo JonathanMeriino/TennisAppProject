@@ -10,9 +10,10 @@ export function RegistroForm() {
     password: "",
     confirmPassword: "",
     username: "",
-    gender: "",
+    sexo: "",
     age: "",
     category: "",
+    boleta: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -48,15 +49,42 @@ export function RegistroForm() {
     setIsLoading(true);
 
     try {
-      await auth.register({
-        email: formData.email,
-        password: formData.password,
-        username: formData.username,
-        gender: formData.gender,
-        age: Number.parseInt(formData.age),
-        category: formData.category,
+      const respuesta = await fetch("http://localhost:8000/api/usuario/", { // Cambiamos el nombre o usamos 'res'
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          perfil: {
+            boleta_usuario: formData.boleta,
+            edad_usuario: parseInt(formData.age),
+            sexo_usuario: formData.sexo,
+            rol: 1,
+            categoria: parseInt(formData.category)
+          }
+        }),
       });
-      router.push("/registro-exitoso");
+      const data = await respuesta.json();
+      if (respuesta.ok){
+        // SI todo sale bien, redirigimos al usuario a la página de registro exitoso
+        router.push("/registro-exitoso");
+      }else {
+        // Si django rechaza el registro 
+        if (data.username) {
+          setError("El nombre de usuario ya esta en uso. Elige otro");
+        }else if(data.email){
+          setError("El correo electrónico ya esta en uso. Elige otro");
+        } else if(data.perfil?.boleta_usuario){
+          setError("El número de boleta ya esta en uso. Elige otro");
+        } 
+        else {
+          setError("Por favor verifica los datos ingresados. Algo salió mal.");
+        }
+      }
+      
     } catch (err) {
       setError(
         err.message || "Error al crear la cuenta. Por favor intenta de nuevo.",
@@ -95,25 +123,38 @@ export function RegistroForm() {
             />
           </div>
 
+         {/* Fila: Nombre de Usuario y Boleta */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-foreground mb-2"
-            >
+            <label className="block text-sm font-medium text-foreground mb-2">
               Nombre de Usuario
             </label>
             <input
-              id="username"
-              name="username"
               type="text"
+              name="username"
               placeholder="TenisPlayer123"
               value={formData.username}
               onChange={handleChange}
+              className="input-field w-full"
               required
-              className="input-field"
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Número de Boleta
+            </label>
+            <input
+              type="text"
+              name="boleta"
+              placeholder="Ej. 2026630000"
+              value={formData.boleta}
+              onChange={handleChange}
+              className="input-field w-full"
+              required
+            />
+          </div>
+        </div>
           <div>
             <label
               htmlFor="password"
@@ -167,9 +208,8 @@ export function RegistroForm() {
               className="input-field"
             >
               <option value="">Selecciona tu sexo</option>
-              <option value="masculino">Masculino</option>
-              <option value="femenino">Femenino</option>
-              <option value="otro">Otro</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
             </select>
           </div>
 
@@ -209,12 +249,11 @@ export function RegistroForm() {
               className="input-field"
             >
               <option value="">Selecciona tu categoría</option>
-              <option value="A">Categoría A</option>
-              <option value="B">Categoría B</option>
-              <option value="C">Categoría C</option>
-              <option value="D">Categoría D</option>
-              <option value="E">Categoría E</option>
               <option value="Principiante">Principiante</option>
+              <option value="Clase D">Categoría D</option>
+              <option value="Clase C">Categoría C</option>
+              <option value="Clase B">Categoría B</option>
+              <option value="Clase A">Categoría A</option>
             </select>
           </div>
         </div>
