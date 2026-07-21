@@ -33,15 +33,7 @@ export default function RegistroExitosoPage() {
             <Link href="/" className="btn-primary w-full text-center">
               Ir a Iniciar Sesión
             </Link>
-            <p className="text-sm text-muted-foreground">
-              ¿Ya tienes todo listo?{" "}
-              <Link
-                href="/dashboard"
-                className="text-primary font-medium hover:underline"
-              >
-                Ve al Dashboard
-              </Link>
-            </p>
+            
           </div>
 
           <div className="mt-8 pt-8 border-t border-border text-sm text-muted-foreground space-y-2">
