@@ -40,7 +40,22 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email','password', 'first_name', 'last_name', 'perfil']
         # Añadimos esta linea para que la contraseña sea segura y no viaje de regreso
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': True},
+        }
+    #Validar si el correo existe antes de crear
+    def validate(self, data):
+        # Validar si el email ya existe en la base de datos
+        email = data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError({"email": "Este correo ya está registrado."})
+        # VAlidar si la boleta ya existe en la tabla de Perfil
+        perfil_data = data.get('perfil', {})
+        boleta_usuario = perfil_data.get('boleta_usuario')
+        if boleta_usuario and Perfil.objects.filter(boleta_usuario=boleta_usuario).exists():
+            raise serializers.ValidationError({"boleta_usuario": "Esta boleta ya está registrada."})
+        return data
 
     # Sobreescribimos create para guardar ambas tablas al mismo tiempo
     def create(self, validated_data):
