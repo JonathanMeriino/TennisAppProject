@@ -133,16 +133,16 @@ async function request(url, options = {}) {
 
 export const auth = {
   async register(data) {
-    const result = await request("/api/auth/register", {
+    const result = await request("/api/usuario/", {
       method: "POST",
-      body: data,
+      body: JSON.stringify(data),
     });
     if (result?.token) setToken(result.token);
     return result;
   },
 
   async login(username, password) {
-    const result = await request("/api/auth/login", {
+    const result = await request("/api/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
