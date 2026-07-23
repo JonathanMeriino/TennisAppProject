@@ -12,9 +12,10 @@ export function EditProfileForm() {
     name: "",
     username: "",
     email: "",
-    gender: "masculino",
-    age: "",
-    category: "B",
+    sexo: "",
+    edad: "",
+    categoria: "",
+    boleta: "",
   });
 
   const [passwords, setPasswords] = useState({
@@ -30,16 +31,25 @@ export function EditProfileForm() {
   useEffect(() => {
     auth
       .me()
-      .then((user) =>
+      .then((user) => {
+        // Extraemos de forma segura tanto si vienen planos como dentro de 'perfil'
+        const perfilData = user.perfil || {};
+        
+        const sexoVal = user.genero || user.sexo || perfilData.sexo_usuario || "";
+        const edadVal = user.edad !== undefined ? user.edad : perfilData.edad_usuario;
+        const categoriaVal = user.categoria !== undefined ? user.categoria : perfilData.categoria;
+        const boletaVal = perfilData.boleta_usuario || "";
+
         setFormData({
-          name: user.name || "",
+          name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
           username: user.username || "",
           email: user.email || "",
-          gender: user.gender || "masculino",
-          age: user.age != null ? String(user.age) : "",
-          category: user.category || "B",
-        }),
-      )
+          sexo: sexoVal,
+          edad: edadVal != null ? String(edadVal) : "",
+          categoria: categoriaVal != null ? String(categoriaVal) : "",
+          boleta: boletaVal,
+        });
+      })
       .catch((err) => setError(err.message));
   }, []);
 
@@ -63,9 +73,9 @@ export function EditProfileForm() {
     setSuccess("");
 
     if (
-      Number.parseInt(formData.age) < 8 ||
-      Number.parseInt(formData.age) > 100 ||
-      isNaN(Number.parseInt(formData.age))
+      Number.parseInt(formData.edad) < 8 ||
+      Number.parseInt(formData.edad) > 100 ||
+      isNaN(Number.parseInt(formData.edad))
     ) {
       setError("Por favor ingresa una edad válida (entre 8 y 100)");
       return;
@@ -86,9 +96,10 @@ export function EditProfileForm() {
         name: formData.name,
         username: formData.username,
         email: formData.email,
-        gender: formData.gender,
-        age: Number.parseInt(formData.age),
-        category: formData.category,
+        sexo: formData.sexo,
+        edad: Number.parseInt(formData.edad),
+        categoria: formData.categoria,
+        boleta: formData.boleta,
       };
 
       if (passwords.newPassword) {
@@ -123,19 +134,6 @@ export function EditProfileForm() {
             ✓ {success}
           </div>
         )}
-
-        {/* Avatar Section */}
-        <div className="flex flex-col items-center space-y-4 pb-6 border-b border-border">
-          <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center text-primary text-2xl font-bold border-4 border-card">
-            {formData.name.substring(0, 2).toUpperCase()}
-          </div>
-          <button
-            type="button"
-            className="text-sm text-primary font-medium hover:underline"
-          >
-            Cambiar foto
-          </button>
-        </div>
 
         {/* Personal Information */}
         <div>
@@ -178,7 +176,23 @@ export function EditProfileForm() {
                 className="input-field"
               />
             </div>
-
+            <div>
+              <label
+                htmlFor="boleta"
+                className="block text-sm font-medium text-foreground mb-2"
+              >
+                Número de Boleta
+              </label>
+              <input
+                id="boleta"
+                name="boleta"
+                type="text"
+                value={formData.boleta}
+                onChange={handleChange}
+                disabled
+                className="input-field opacity-60 cursor-not-allowed bg-muted"
+              />
+            </div>
             <div>
               <label
                 htmlFor="email"
@@ -199,18 +213,18 @@ export function EditProfileForm() {
 
             <div>
               <label
-                htmlFor="age"
+                htmlFor="edad"
                 className="block text-sm font-medium text-foreground mb-2"
               >
                 Edad
               </label>
               <input
-                id="age"
-                name="age"
+                id="edad"
+                name="edad"
                 type="number"
                 min="8"
                 max="100"
-                value={formData.age}
+                value={formData.edad}
                 onChange={handleChange}
                 required
                 className="input-field"
@@ -219,45 +233,39 @@ export function EditProfileForm() {
 
             <div>
               <label
-                htmlFor="gender"
+                htmlFor="sexo"
                 className="block text-sm font-medium text-foreground mb-2"
               >
                 Género
               </label>
-              <select
-                id="gender"
-                value={formData.gender}
-                onChange={(e) => handleSelectChange("gender", e.target.value)}
-                required
-                className="input-field"
-              >
-                <option value="masculino">Masculino</option>
-                <option value="femenino">Femenino</option>
-                <option value="otro">Otro</option>
-              </select>
+              <input
+                id="sexo"
+                name="sexo"
+                type="text"
+                value={formData.sexo}
+                onChange={handleChange}
+                disabled
+                className="input-field opacity-60 cursor-not-allowed bg-muted"
+              />
             </div>
 
             <div>
               <label
-                htmlFor="category"
+                htmlFor="categoria"
                 className="block text-sm font-medium text-foreground mb-2"
               >
                 Categoría de Juego
               </label>
-              <select
-                id="category"
-                value={formData.category}
-                onChange={(e) => handleSelectChange("category", e.target.value)}
-                required
-                className="input-field"
-              >
-                <option value="A">Categoría A</option>
-                <option value="B">Categoría B</option>
-                <option value="C">Categoría C</option>
-                <option value="D">Categoría D</option>
-                <option value="E">Categoría E</option>
-                <option value="Principiante">Principiante</option>
-              </select>
+              <input
+                id="categoria"
+                name="categoria"
+                type="text"
+                value={formData.categoria}
+                onChange={handleChange}
+                disabled
+                className="input-field opacity-60 cursor-not-allowed bg-muted"
+              />
+             
             </div>
           </div>
         </div>
