@@ -195,21 +195,22 @@ export function RegistroForm() {
 
           <div>
             <label
-              htmlFor="gender"
+              htmlFor="sexo"
               className="block text-sm font-medium text-foreground mb-2"
             >
               Sexo
             </label>
             <select
-              id="gender"
-              value={formData.gender}
-              onChange={(e) => handleSelectChange("gender", e.target.value)}
+              id="sexo"
+              name="sexo"
+              value={formData.sexo}
+              onChange={(e) => handleSelectChange("sexo", e.target.value)}
               required
               className="input-field"
             >
               <option value="">Selecciona tu sexo</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Femenino">Femenino</option>
+              <option value="M">Masculino</option>
+              <option value="F">Femenino</option>
             </select>
           </div>
 
@@ -243,17 +244,18 @@ export function RegistroForm() {
             </label>
             <select
               id="category"
+              name="category"
               value={formData.category}
               onChange={(e) => handleSelectChange("category", e.target.value)}
               required
               className="input-field"
             >
               <option value="">Selecciona tu categoría</option>
-              <option value="Principiante">Principiante</option>
-              <option value="Clase D">Categoría D</option>
-              <option value="Clase C">Categoría C</option>
-              <option value="Clase B">Categoría B</option>
-              <option value="Clase A">Categoría A</option>
+              <option value="1">Principiante</option>
+              <option value="2">Categoría D</option>
+              <option value="3">Categoría C</option>
+              <option value="4">Categoría B</option>
+              <option value="5">Categoría A</option>
             </select>
           </div>
         </div>
