@@ -15,12 +15,26 @@ class GetUserViewSet(viewsets.ViewSet):
 
     def get (self,request):
         user = request.user
-        serializer = UserSerializer(user)
+        perfil = getattr(user, 'perfil', None)
+
+        #Obtenermos el valor de la categoria
+
+        categoria_val = None
+        if perfil and perfil.categoria:
+            categoria_val = getattr(perfil.categoria, 'nombre_categoria', str(perfil.categoria))
+
+
+
         return Response({
-            "username":user.username,
-            "email":user.email,
-            "boleta":user.perfil.boleta_usuario if hasattr(user, 'perfil') else None,
-        
+            "username": user.username,
+            "email": user.email,
+            "date_joined": user.date_joined,
+            "perfil": {
+                "boleta_usuario": perfil.boleta_usuario if perfil else None,
+                "categoria": categoria_val,
+                "edad_usuario": perfil.edad_usuario if perfil else None,
+                "sexo_usuario": perfil.sexo_usuario if perfil else None,
+            }
         })
 
 class RolesViewSet(viewsets.ModelViewSet):
