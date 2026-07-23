@@ -59,15 +59,23 @@ class UserSerializer(serializers.ModelSerializer):
 
     # Sobreescribimos create para guardar ambas tablas al mismo tiempo
     def create(self, validated_data):
-        perfil_data = validated_data.pop('perfil') # Sacamos los datos del perfil
-
-        password = validated_data.pop('password')  # Extraemos la contraseña si está presente
-        user = User.objects.create_user(password=password, **validated_data) # Creamos el User estándar
+        #Extraemos los datos del perfil si vienen en el request
+        perfil_data = validated_data.pop('perfil') 
+        password = validated_data.pop('password') 
+        #Creamos el usuario base
+        user = User.objects.create_user(password=password, **validated_data)
         
         # Actualizamos el perfil que se creó automáticamente por la Signal
-        for attr, value in perfil_data.items():
-            setattr(user.perfil, attr, value)
-        user.perfil.save()
+        Perfil.objects.update_or_create(
+            user=user,
+            defaults={
+                'boleta_usuario': perfil_data.get('boleta_usuario'),
+                'edad_usuario': perfil_data.get('edad_usuario'),
+                'sexo_usuario': perfil_data.get('sexo_usuario'),
+                'categoria': perfil_data.get('categoria'),
+                'rol': perfil_data.get('rol', 1)
+            }
+        )
         
         return user
 
