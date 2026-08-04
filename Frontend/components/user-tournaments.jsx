@@ -72,7 +72,7 @@ export function UserTournaments() {
       <div className="space-y-4">
         {tournaments.map((tournament) => (
           <div
-            key={tournament.id}
+            key={tournament.id_torneo || tournament.id}
             className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
           >
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
