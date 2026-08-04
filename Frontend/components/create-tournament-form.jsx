@@ -9,16 +9,15 @@ export function CreateTournamentForm() {
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    name: "",
-    location: "",
-    description: "",
-    category: "",
-    format: "round-robin",
-    numberOfGroups: "2",
+    nombre_torneo: "",
+    fecha_inicio:"",
+    fecha_fin:"",
+    categoria: "",
+    rama_torneo: "Varonil",
+    estado:"Programado",
+    
   });
 
-  const [startDate, setStartDate] = useState("");
-  const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,45 +26,30 @@ export function CreateTournamentForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files?.[0];
-    setFile(selectedFile || null);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!startDate) {
+    if (!formData.fecha_inicio) {
       setError("Por favor selecciona la fecha de inicio del torneo");
-      return;
-    }
-
-    if (!file) {
-      setError("Por favor sube el archivo Excel con los participantes");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const payload = new FormData();
-      payload.append("name", formData.name);
-      payload.append("location", formData.location);
-      payload.append("description", formData.description);
-      payload.append("category", formData.category);
-      payload.append("format", formData.format);
-      payload.append("numberOfGroups", formData.numberOfGroups);
-      payload.append("startDate", startDate);
-      payload.append("file", file);
-
+      const payload = {
+        nombre_torneo: formData.nombre_torneo,
+        fecha_inicio: formData.fecha_inicio,
+        fecha_fin: formData.fecha_fin,
+        categoria: formData.categoria,
+        rama_torneo: formData.rama_torneo,
+        estado_torneo: formData.estado,
+      };
       const created = await tournamentsApi.create(payload);
-      if (created?.id) {
-        router.push(`/torneos/${created.id}`);
+      if (created?.id_torneo || created?.id) {
+        router.push(`/torneos/${created.id_torneo || created.id}`);
       } else {
         router.push("/dashboard");
       }
@@ -90,191 +74,111 @@ export function CreateTournamentForm() {
         {/* Name */}
         <div>
           <label
-            htmlFor="name"
+            htmlFor="nombre_torneo"
             className="block text-sm font-medium text-foreground mb-2"
           >
             Nombre del Torneo
           </label>
           <input
-            id="name"
-            name="name"
+            id="nombre_torneo"
+            name="nombre_torneo"
             type="text"
             placeholder="Ej: Torneo Primavera 2024"
-            value={formData.name}
+            value={formData.nombre_torneo}
             onChange={handleChange}
             required
             className="input-field"
           />
         </div>
 
-        {/* Date and Category */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Fecha de inicio y final */}
+        
           <div>
-            <label
-              htmlFor="startDate"
-              className="block text-sm font-medium text-foreground mb-2"
-            >
+            <label className="block text-sm font-medium text-foreground mb-2">
               Fecha de Inicio
             </label>
+
             <input
-              id="startDate"
+              id="fecha_inicio"
+              name="fecha_inicio"
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={formData.fecha_inicio}
+              onChange={handleChange}
               required
               className="input-field"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="category"
-              className="block text-sm font-medium text-foreground mb-2"
-            >
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Fecha de Finalización
+            </label>
+            <input
+              id="fecha_fin"
+              name="fecha_fin"
+              type="date"
+              value={formData.fecha_fin}
+              onChange={handleChange}
+              required
+              className="input-field"
+            />
+          </div>
+        
+        {/* Rama y categoria */}
+        <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
               Categoría
             </label>
             <select
-              id="category"
-              value={formData.category}
-              onChange={(e) => handleSelectChange("category", e.target.value)}
+              name="categoria"
+              value={formData.categoria}
+              onChange={handleChange}
               required
               className="input-field"
             >
-              <option value="">Seleccionar categoría</option>
-              <option value="A">Categoría A</option>
-              <option value="B">Categoría B</option>
-              <option value="C">Categoría C</option>
-              <option value="D">Categoría D</option>
-              <option value="E">Categoría E</option>
-              <option value="Principiante">Principiante</option>
+              <option value="">Selecciona tu categoría</option>
+              <option value="1">Principiante</option>
+              <option value="2">Categoría D</option>
+              <option value="3">Categoría C</option>
+              <option value="4">Categoría B</option>
+              <option value="5">Categoría A</option>
             </select>
           </div>
-        </div>
 
-        {/* Location */}
         <div>
-          <label
-            htmlFor="location"
-            className="block text-sm font-medium text-foreground mb-2"
-          >
-            Ubicación
-          </label>
-          <input
-            id="location"
-            name="location"
-            type="text"
-            placeholder="Ej: Club de Tenis Central"
-            value={formData.location}
-            onChange={handleChange}
-            required
-            className="input-field"
-          />
-        </div>
-
-        {/* Format */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-3">
-            Formato del Torneo
-          </label>
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors">
-              <input
-                type="radio"
-                value="round-robin"
-                checked={formData.format === "round-robin"}
-                onChange={(e) => handleSelectChange("format", e.target.value)}
-                className="w-4 h-4"
-              />
-
-              <span className="font-medium text-foreground">Round Robin</span>
-            </label>
-            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors">
-              <input
-                type="radio"
-                value="elimination"
-                checked={formData.format === "elimination"}
-                onChange={(e) => handleSelectChange("format", e.target.value)}
-                className="w-4 h-4"
-              />
-
-              <span className="font-medium text-foreground">
-                Eliminación Directa
-              </span>
-            </label>
-            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors">
-              <input
-                type="radio"
-                value="mixed"
-                checked={formData.format === "mixed"}
-                onChange={(e) => handleSelectChange("format", e.target.value)}
-                className="w-4 h-4"
-              />
-
-              <span className="font-medium text-foreground">
-                Mixto (Round Robin + Eliminación)
-              </span>
-            </label>
-          </div>
-        </div>
-
-        {/* Number of Groups */}
-        {(formData.format === "round-robin" || formData.format === "mixed") && (
-          <div>
-            <label
-              htmlFor="numberOfGroups"
-              className="block text-sm font-medium text-foreground mb-2"
-            >
-              Número de Grupos
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Rama
             </label>
             <select
-              id="numberOfGroups"
-              value={formData.numberOfGroups}
-              onChange={(e) =>
-                handleSelectChange("numberOfGroups", e.target.value)
-              }
+              name="rama_torneo"
+              value={formData.rama_torneo}
+              onChange={handleChange}
               className="input-field"
             >
-              <option value="2">2 grupos</option>
-              <option value="4">4 grupos</option>
-              <option value="8">8 grupos</option>
+              <option value="Varonil">Varonil</option>
+              <option value="Femenil">Femenil</option>
+              <option value="Mixto">Mixto</option>
             </select>
           </div>
-        )}
 
-        {/* Description */}
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-foreground mb-2"
-          >
-            Descripción (Opcional)
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            placeholder="Describe los detalles del torneo..."
-            value={formData.description}
-            onChange={handleChange}
-            className="input-field min-h-[100px] resize-none"
-          />
-        </div>
+        
+        {/* Estado del Torneo */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Estado Inicial
+            </label>
+            <select
+              name="estado"
+              value={formData.estado}
+              onChange={handleChange}
+              className="input-field"
+            >
+              <option value="Programado">Programado</option>
+              <option value="En Curso">En Curso</option>
+              <option value="Finalizado">Finalizado</option>
+            </select>
+          </div>
 
-        {/* File Upload */}
-        <div>
-          <label
-            htmlFor="fileUpload"
-            className="block text-sm font-medium text-foreground mb-2"
-          >
-            Subir Archivo Excel con Participantes
-          </label>
-          <input
-            id="fileUpload"
-            type="file"
-            onChange={handleFileChange}
-            required
-            className="input-field"
-          />
-        </div>
 
         {/* Buttons */}
         <div className="flex gap-3 pt-6">

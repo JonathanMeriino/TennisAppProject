@@ -157,7 +157,7 @@ export const auth = {
   },
 
   async updateProfile(data) {
-    return request("/api/auth/me", { method: "PUT", body: data });
+    return request("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
   },
 
   logout() {
@@ -169,19 +169,20 @@ export const auth = {
 
 export const tournaments = {
   async list() {
-    return request("/api/torneo");
+    return request("/api/torneo/");
   },
 
   async get(id) {
-    return request(`/api/torneo/${id}`);
+    return request(`/api/torneo/${id}/`);
   },
 
-  // formData: FormData con los campos del torneo + el archivo Excel
-  async create(formData) {
-    return request("/api/torneo", {
+  async create(data) {
+    return request("/api/torneo/", {
       method: "POST",
-      body: formData,
-      isForm: true,
+      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
   },
 
