@@ -68,10 +68,22 @@ def save_user_profile(sender, instance, **kwargs):
 class Torneo(models.Model):
     id_torneo = models.AutoField(primary_key=True)
     nombre_torneo = models.CharField(max_length=150)
-    rama_torneo = models.CharField(max_length=50) # Ej: Varonil, Femenil, Mixto
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
-    estado_torneo = models.CharField(max_length=50, default='Programado')
+    RAMA_CHOICES = [
+        ('Varonil', 'Varonil'),
+        ('Femenil', 'Femenil'),
+        ('Mixto', 'Mixto'),
+    ]
+    rama_torneo = models.CharField(max_length=50, choices=RAMA_CHOICES, default='Varonil') # Ej: Varonil, Femenil, Mixto
+    
+
+    ESTADO_CHOICES = [
+        ('Programado', 'Programado'),
+        ('En Curso', 'En Curso'),
+        ('Finalizado', 'Finalizado'),
+    ]
+    estado_torneo = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='Programado')
     
     # Relación con la tabla Categoria
     categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name='torneos')
