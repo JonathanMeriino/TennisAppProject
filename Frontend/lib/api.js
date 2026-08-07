@@ -186,10 +186,13 @@ export const tournaments = {
     });
   },
 
-  async join(code) {
-    return request("/api/torneo/join", {
+  async join(tournamentId, availabilityData) {
+    return request(`/api/torneo/${tournamentId}/inscribir`, {
       method: "POST",
-      body: { code },
+      body: JSON.stringify({ matriz_disponibilidad: availabilityData }),
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
   },
 
