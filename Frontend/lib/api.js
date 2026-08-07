@@ -187,7 +187,7 @@ export const tournaments = {
   },
 
   async join(tournamentId, availabilityData) {
-    return request(`/api/torneo/${tournamentId}/inscribir`, {
+    return request(`/api/torneo/${tournamentId}/inscribir/`, {
       method: "POST",
       body: JSON.stringify({ matriz_disponibilidad: availabilityData }),
       headers: {
