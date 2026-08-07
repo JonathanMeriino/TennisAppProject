@@ -196,8 +196,8 @@ export const tournaments = {
     });
   },
 
-  async groups(id) {
-    return request(`/api/torneo/${id}/groups`);
+  async participants(id) {
+    return request(`/api/torneo/${id}/inscripciones/`);
   },
 
   async matches(id) {
