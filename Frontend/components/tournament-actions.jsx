@@ -36,17 +36,10 @@ export function TournamentActions() {
         Crea un nuevo torneo o únete a uno existente
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link href="/crear-torneo" className="btn-primary text-center py-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Link href="/crear-torneo" className="btn-primary text-center py-3">
           ➕ Crear Torneo
         </Link>
-
-        <button
-          onClick={() => setShowJoinDialog(true)}
-          className="btn-outline text-center py-4"
-        >
-          👥 Unirse a Torneo
-        </button>
       </div>
 
       {/* Join Dialog */}
