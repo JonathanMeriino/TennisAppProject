@@ -9,7 +9,8 @@ export function EditProfileForm() {
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    name: "",
+    nombres: "",
+    apellidos: "",
     username: "",
     email: "",
     sexo: "",
@@ -17,12 +18,12 @@ export function EditProfileForm() {
     categoria: "",
     boleta: "",
   });
-
+/*
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  });
+  });*/
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +42,8 @@ export function EditProfileForm() {
         const boletaVal = perfilData.boleta_usuario || "";
 
         setFormData({
-          name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+          nombres: user.first_name || "",
+          apellidos: user.last_name || "",
           username: user.username || "",
           email: user.email || "",
           sexo: sexoVal,
@@ -57,15 +59,11 @@ export function EditProfileForm() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
+/*
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswords((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  };*/
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,7 +78,7 @@ export function EditProfileForm() {
       setError("Por favor ingresa una edad válida (entre 8 y 100)");
       return;
     }
-
+/*
     if (
       passwords.newPassword &&
       passwords.newPassword !== passwords.confirmPassword
@@ -88,12 +86,13 @@ export function EditProfileForm() {
       setError("Las nuevas contraseñas no coinciden");
       return;
     }
-
+*/
     setIsLoading(true);
 
     try {
       const payload = {
-        name: formData.name,
+        first_name: formData.nombres,
+        last_name: formData.apellidos,
         username: formData.username,
         email: formData.email,
         sexo: formData.sexo,
@@ -101,11 +100,11 @@ export function EditProfileForm() {
         categoria: formData.categoria,
         boleta: formData.boleta,
       };
-
+/*
       if (passwords.newPassword) {
         payload.currentPassword = passwords.currentPassword;
         payload.newPassword = passwords.newPassword;
-      }
+      }*/
 
       await auth.updateProfile(payload);
       setSuccess("Perfil actualizado correctamente");
@@ -143,22 +142,39 @@ export function EditProfileForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label
-                htmlFor="name"
+                htmlFor="nombres"
                 className="block text-sm font-medium text-foreground mb-2"
               >
-                Nombre Completo
+                Nombres
               </label>
               <input
-                id="name"
-                name="name"
+                id="nombres"
+                name="nombres"
                 type="text"
-                value={formData.name}
+                value={formData.nombres}
                 onChange={handleChange}
                 required
                 className="input-field"
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="apellidos"
+                className="block text-sm font-medium text-foreground mb-2"
+              >
+                Apellidos
+              </label>
+              <input
+                id="apellidos"
+                name="apellidos"
+                type="text"
+                value={formData.apellidos}
+                onChange={handleChange}
+                required
+                className="input-field"
+              />
+            </div>
             <div>
               <label
                 htmlFor="username"
@@ -270,65 +286,6 @@ export function EditProfileForm() {
           </div>
         </div>
 
-        {/* Password Section */}
-        <div className="pt-6 border-t border-border">
-          <h3 className="text-lg font-bold text-foreground mb-4">Seguridad</h3>
-          <div className="space-y-6">
-            <div>
-              <label
-                htmlFor="currentPassword"
-                className="block text-sm font-medium text-foreground mb-2"
-              >
-                Contraseña Actual (para confirmar cambios)
-              </label>
-              <input
-                id="currentPassword"
-                name="currentPassword"
-                type="password"
-                value={passwords.currentPassword}
-                onChange={handlePasswordChange}
-                required
-                className="input-field"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="newPassword"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Nueva Contraseña (Opcional)
-                </label>
-                <input
-                  id="newPassword"
-                  name="newPassword"
-                  type="password"
-                  value={passwords.newPassword}
-                  onChange={handlePasswordChange}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Confirmar Nueva Contraseña
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={passwords.confirmPassword}
-                  onChange={handlePasswordChange}
-                  className="input-field"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Buttons */}
         <div className="flex gap-3 pt-6 border-t border-border">
