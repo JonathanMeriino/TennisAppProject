@@ -48,13 +48,25 @@ class UserSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Validar si el email ya existe en la base de datos
         email = data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError({"email": "Este correo ya está registrado."})
-        # VAlidar si la boleta ya existe en la tabla de Perfil
+
+        if self.instance:  # Si estamos actualizando un usuario existente
+            if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError({"email": "Este correo ya está registrado por otro usuario."})
+            else:  # registro nuevo
+                if User.objects.filter(email=email).exists():
+                    raise serializers.ValidationError({"email": "Este correo ya está registrado."})
+
+
+        # Validar si la boleta ya existe en la tabla de Perfil (excluyendo al usuario actual si aplica)
         perfil_data = data.get('perfil', {})
         boleta_usuario = perfil_data.get('boleta_usuario')
-        if boleta_usuario and Perfil.objects.filter(boleta_usuario=boleta_usuario).exists():
-            raise serializers.ValidationError({"boleta_usuario": "Esta boleta ya está registrada."})
+        if boleta_usuario:
+            query = Perfil.objects.filter(boleta_usuario=boleta_usuario)
+            if self.instance:
+                query = query.exclude(user=self.instance)
+            if query.exists():
+                raise serializers.ValidationError({"boleta_usuario": "Esta boleta ya está registrada."})
+                
         return data
 
     # Sobreescribimos create para guardar ambas tablas al mismo tiempo
@@ -78,7 +90,31 @@ class UserSerializer(serializers.ModelSerializer):
         )
         
         return user
+    def update(self, instance, validated_data):
+        perfil_data = validated_data.pop('perfil', {})
+        
+       
+        # Actualizamos los datos basicos del usuario
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        
+        instance.save()
 
+        # Actualizacion del perfil asociado
+        if perfil_data:
+            Perfil.objects.update_or_create(
+                user=instance,
+                defaults={
+                    'boleta_usuario': perfil_data.get('boleta_usuario', getattr(instance, 'perfil', None) and instance.perfil.boleta_usuario),
+                    'edad_usuario': perfil_data.get('edad_usuario', getattr(instance, 'perfil', None) and instance.perfil.edad_usuario),
+                    'sexo_usuario': perfil_data.get('sexo_usuario', getattr(instance, 'perfil', None) and instance.perfil.sexo_usuario),
+                    'categoria': perfil_data.get('categoria', getattr(instance, 'perfil', None) and instance.perfil.categoria),
+                }
+            )
+            
+        return instance
 
 
 
