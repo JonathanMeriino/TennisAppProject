@@ -163,9 +163,11 @@ export default function TournamentDetailPage() {
               {participants.map((participant, index) => (
                 <li key={index} className="flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 text-sm">
                   <span className="font-medium text-foreground">
-                    {participant.nombre_jugador || participant.user || `Participante ${index + 1}`}
+                    {participant.jugador_nombre || participant.username || participant.jugador || `Participante ${index + 1}`}
                   </span>
-                  <span className="text-xs text-muted-foreground">Confirmado</span>
+                  <span className="text-xs text-muted-foreground">
+                    Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
+                  </span>
                 </li>
               ))}
             </ul>
