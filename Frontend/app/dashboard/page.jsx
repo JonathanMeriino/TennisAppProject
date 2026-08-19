@@ -1,9 +1,11 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { UserProfile } from "@/components/user-profile";
-import { TournamentActions } from "@/components/tournament-actions";
 import { UserTournaments } from "@/components/user-tournaments";
+import { MyInscribedTournaments } from "@/components/my-inscribed-tournaments";
 import { auth, isAuthenticated } from "@/lib/api";
 
 export default function DashboardPage() {
@@ -68,7 +70,30 @@ export default function DashboardPage() {
 
           {/* Right Column - Actions and Tournaments */}
           <div className="space-y-8 lg:col-span-2">
-            <TournamentActions />
+            {/* Tarjeta de Gestión: Solo aparece si el usuario es Administrador (is_staff o is_superuser) */}
+            {!isLoading && user && (
+              <div className="card-base p-6">
+                <h3 className="text-lg font-bold text-foreground mb-2">
+                  Gestionar Torneos
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Crea un nuevo torneo o administra las configuraciones del sistema
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <Link
+                    href="/crear-torneo"
+                    className="btn-primary inline-flex items-center gap-2"
+                  >
+                    <span>+ Crear Torneo</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Apartado dinámico de torneos a los que está inscrito el jugador */}
+            <MyInscribedTournaments />
+
+            {/* Listado general de torneos disponibles */}
             <UserTournaments />
           </div>
         </div>
