@@ -2,6 +2,7 @@ import math
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from .serializer import (RolesSerializer, UserSerializer, TorneoSerializer, InscripcionesSerializer, PartidoSerializer,ResultadoSerializer )
 from .models import (
     Roles, User, Torneo,
@@ -28,6 +29,8 @@ class GetUserViewSet(viewsets.ViewSet):
         return Response({
             "username": user.username,
             "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "date_joined": user.date_joined,
             "perfil": {
                 "boleta_usuario": perfil.boleta_usuario if perfil else None,
@@ -36,6 +39,13 @@ class GetUserViewSet(viewsets.ViewSet):
                 "sexo_usuario": perfil.sexo_usuario if perfil else None,
             }
         })
+    def put(self, request):
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Perfil actualizado correctamente"})
+        return Response(serializer.errors, status=400)
 
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
@@ -49,6 +59,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 class TorneoViewSet(viewsets.ModelViewSet):
     queryset = Torneo.objects.all()
     serializer_class = TorneoSerializer
+    def get_permissions(self):
+        # Permitir que cualquier usuario autenticado vea (GET), 
+        # pero exigir que sea Administrador para crear, actualizar o borrar (POST, PUT, DELETE)
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminUser]
+        else:
+            permission_classes = [IsAuthenticatedOrReadOnly]
+        return [permission() for permission in permission_classes]
 
     @action(detail=True, methods=['post'], url_path='generar-bracket')
     def generar_bracket(self, request, pk=None):
@@ -115,6 +133,38 @@ class TorneoViewSet(viewsets.ModelViewSet):
 
         return Response({"status": f"Cuadro de eliminación directa creado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods = ['post'])
+    def inscribirs(self, request, pk=None):
+        torneo = self.get_object()
+        user = request.user
+        
+        # Extraemos la matriz enviada desde el frontend
+        matriz_disponibilidad = request.data.get('matriz_disponibilidad')
+        
+        # Creamos la inscripción (el numero_siembra se queda en blanco para que lo llene el admin)
+        inscripcion, created = Inscripcion.objects.get_or_create(
+            torneo=torneo,
+            jugador=user,
+            defaults={'matriz_disponibilidad': matriz_disponibilidad}
+        )
+        
+        if not created:
+            return Response({"detail": "Ya estás inscrito en este torneo."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response({"detail": "Inscripción exitosa."}, status=status.HTTP_201_CREATED)
+    @action(detail=True, methods=['get'])
+    def inscripciones(self, request, pk=None):
+        torneo = self.get_object()
+        inscripciones = torneo.inscripciones.all() # Usa el related_name que definiste en tu modelo
+        serializer = InscripcionesSerializer(inscripciones, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def mis_inscripciones(self, request):
+        # Filtramos los torneos donde el usuario actual tenga una inscripción
+        torneos_inscritos = Torneo.objects.filter(inscripciones__jugador=request.user)
+        serializer = TorneoSerializer(torneos_inscritos, many=True)
+        return Response(serializer.data)
 
 class InscripcionViewSet(viewsets.ModelViewSet):
     serializer_class = InscripcionesSerializer
