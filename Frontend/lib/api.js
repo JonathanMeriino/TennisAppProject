@@ -210,4 +210,8 @@ export const tournaments = {
       { method: "POST", body: result },
     );
   },
+
+  async myTournaments() {
+    return request("/api/torneo/mis_inscripciones/");
+  },
 };
