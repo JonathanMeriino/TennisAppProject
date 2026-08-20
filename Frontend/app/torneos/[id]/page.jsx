@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { tournaments as tournamentsApi } from "@/lib/api";
+import { tournaments as tournamentsApi, auth } from "@/lib/api";
 
 const TIME_SLOTS = [
   "08:00 - 10:00",
@@ -20,11 +20,15 @@ export default function TournamentDetailPage() {
 
   const [tournament, setTournament] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Estados para el modal de disponibilidad
+  // Estados para modales
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [availability, setAvailability] = useState({}); // Estructura: { Lunes: ["08:00 - 10:00"], ... }
+  const [isSiembraModalOpen, setIsSiembraModalOpen] = useState(false);
+  const [availability, setAvailability] = useState({});
+  const [siembraValues, setSiembraValues] = useState({});
+  
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -34,30 +38,25 @@ export default function TournamentDetailPage() {
 
     Promise.all([
       tournamentsApi.get(id),
-      tournamentsApi.matches ? tournamentsApi.matches(id).catch(() => []) : Promise.resolve([])
+      tournamentsApi.participants ? tournamentsApi.participants(id).catch(() => []) : Promise.resolve([]),
+      auth.me().catch(() => null)
     ])
-      .then(([tournamentData, participantsData]) => {
+      .then(([tournamentData, participantsData, userData]) => {
         setTournament(tournamentData);
         setParticipants(Array.isArray(participantsData) ? participantsData : participantsData.results || []);
+        setCurrentUser(userData);
       })
       .catch(() => setError("Error al cargar la información del torneo."))
       .finally(() => setIsLoading(false));
   }, [id]);
 
-  // Manejar selección de casillas de disponibilidad
   const handleCheckboxChange = (day, slot) => {
     setAvailability((prev) => {
       const currentDaySlots = prev[day] || [];
       if (currentDaySlots.includes(slot)) {
-        return {
-          ...prev,
-          [day]: currentDaySlots.filter((s) => s !== slot),
-        };
+        return { ...prev, [day]: currentDaySlots.filter((s) => s !== slot) };
       } else {
-        return {
-          ...prev,
-          [day]: [...currentDaySlots, slot],
-        };
+        return { ...prev, [day]: [...currentDaySlots, slot] };
       }
     });
   };
@@ -68,7 +67,6 @@ export default function TournamentDetailPage() {
     setError("");
     setSuccessMessage("");
 
-    // Validar que al menos haya seleccionado una disponibilidad
     if (Object.keys(availability).length === 0) {
       setError("Por favor selecciona al menos un horario de disponibilidad.");
       setIsRegistering(false);
@@ -76,19 +74,36 @@ export default function TournamentDetailPage() {
     }
 
     try {
-      // Llamamos a la API enviando la disponibilidad que mapea con el modelo
       await tournamentsApi.join(id, availability);
-      
-      setSuccessMessage("¡Te has inscrito exitosamente y se guardó tu disponibilidad!");
+      setSuccessMessage("¡Te has inscrito exitosamente!");
       setIsModalOpen(false);
 
-      // Recargamos la lista de participantes inscritos
-      const updatedParticipants = await tournamentsApi.matches(id).catch(() => []);
+      const updatedParticipants = await tournamentsApi.participants(id).catch(() => []);
       setParticipants(Array.isArray(updatedParticipants) ? updatedParticipants : updatedParticipants.results || []);
     } catch (err) {
-      setError(err.message || "Hubo un error al intentar inscribirte (es posible que ya estés inscrito).");
+      setError(err.message || "Hubo un error al intentar inscribirte.");
     } finally {
       setIsRegistering(false);
+    }
+  };
+
+  const handleSiembraChange = (inscripcionId, value) => {
+    setSiembraValues((prev) => ({ ...prev, [inscripcionId]: value }));
+  };
+
+  const handleSaveSiembras = async () => {
+    try {
+      const promises = Object.entries(siembraValues).map(([inscId, siembra]) =>
+        tournamentsApi.updateSiembra(inscId, siembra)
+      );
+      await Promise.all(promises);
+      setSuccessMessage("¡Números de siembra actualizados correctamente!");
+      setIsSiembraModalOpen(false);
+
+      const updatedParticipants = await tournamentsApi.participants(id).catch(() => []);
+      setParticipants(Array.isArray(updatedParticipants) ? updatedParticipants : updatedParticipants.results || []);
+    } catch (err) {
+      setError("Error al guardar las siembras.");
     }
   };
 
@@ -98,7 +113,7 @@ export default function TournamentDetailPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6 max-w-4xl relative">
-      {/* Información General del Torneo */}
+      {/* Tarjeta de Información General */}
       <div className="card-base p-6 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -150,20 +165,24 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
-      {/* Lista de Jugadores y Llaves */}
+      {/* Sección Inferior: Jugadores y Llaves */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Lista de Jugadores Inscritos */}
         <div className="card-base p-6 space-y-4">
           <h3 className="text-lg font-bold text-foreground">Jugadores Inscritos</h3>
           {participants.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              Aún no hay jugadores inscritos. ¡Sé el primero en unirte!
+              Aún no hay jugadores inscritos en este torneo.
             </p>
           ) : (
             <ul className="space-y-2">
               {participants.map((participant, index) => (
-                <li key={index} className="flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 text-sm">
+                <li
+                  key={participant.id_inscripcion || index}
+                  className="flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 text-sm"
+                >
                   <span className="font-medium text-foreground">
-                    {participant.jugador_nombre || participant.username || participant.jugador || `Participante ${index + 1}`}
+                    {participant.jugador_username || participant.username || participant.jugador_nombre || `Participante ${index + 1}`}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
@@ -174,18 +193,31 @@ export default function TournamentDetailPage() {
           )}
         </div>
 
+        {/* Bracket / Llaves y Botón de Administración */}
         <div className="card-base p-6 space-y-4">
-          <h3 className="text-lg font-bold text-foreground">Bracket / Llaves</h3>
-          <p className="text-sm text-muted-foreground">
-            Los enfrentamientos de eliminación directa se generarán automáticamente una vez que cierren las inscripciones.
-          </p>
-          <div className="border border-dashed border-border rounded-lg p-8 text-center text-muted-foreground text-sm">
+          <div className="flex flex-col gap-3">
+            <h3 className="text-lg font-bold text-foreground">Bracket / Llaves</h3>
+            <p className="text-sm text-muted-foreground">
+              Asigna los números de siembra a los jugadores para configurar las llaves de eliminación directa.
+            </p>
+            
+            {participants.length > 0 && (
+              <button
+                onClick={() => setIsSiembraModalOpen(true)}
+                className="btn-primary text-xs py-2 px-4 w-full text-center mt-2"
+              >
+                Ingresar números de siembra
+              </button>
+            )}
+          </div>
+
+          <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm mt-4">
             Diagrama de llaves pendiente de generación.
           </div>
         </div>
       </div>
 
-      {/* MODAL DE DISPONIBILIDAD */}
+      {/* MODAL DE DISPONIBILIDAD PARA INSCRIPCIÓN */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="card-base bg-card p-6 max-w-2xl w-full space-y-6 max-h-[90vh] overflow-y-auto">
@@ -218,7 +250,7 @@ export default function TournamentDetailPage() {
                               <input
                                 type="checkbox"
                                 checked={isChecked}
-                                onChange={() => handleCheckboxChange(day, slot)} // O tu función correspondiente
+                                onChange={() => handleCheckboxChange(day, slot)}
                                 className="w-4 h-4 accent-primary rounded cursor-pointer"
                               />
                             </td>
@@ -247,6 +279,55 @@ export default function TournamentDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA ASIGNAR NÚMEROS DE SIEMBRA */}
+      {isSiembraModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="card-base bg-card p-6 max-w-md w-full space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-foreground">Ingresar números de siembra</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Actualiza el número de siembra para cada participante de este torneo:
+              </p>
+            </div>
+
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+              {participants.map((p) => (
+                <div key={p.id_inscripcion} className="flex items-center justify-between gap-4 p-2.5 border border-border rounded-lg bg-card/50">
+                  <span className="text-sm font-medium text-foreground">
+                    {p.jugador_username || p.username || p.jugador_nombre || "Participante"}
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Ej. 1"
+                    defaultValue={p.numero_siembra || ""}
+                    onChange={(e) => handleSiembraChange(p.id_inscripcion, e.target.value)}
+                    className="input-field w-20 text-center py-1 text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsSiembraModalOpen(false)}
+                className="btn-outline flex-1"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSiembras}
+                className="btn-primary flex-1"
+              >
+                Guardar Siembras
+              </button>
+            </div>
           </div>
         </div>
       )}
