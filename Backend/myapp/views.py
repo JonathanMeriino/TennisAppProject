@@ -134,7 +134,7 @@ class TorneoViewSet(viewsets.ModelViewSet):
         return Response({"status": f"Cuadro de eliminación directa creado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods = ['post'])
-    def inscribirs(self, request, pk=None):
+    def inscribir(self, request, pk=None):
         torneo = self.get_object()
         user = request.user
         
@@ -206,11 +206,3 @@ class ResultadoViewSet(viewsets.ModelViewSet):
             elif sig_partido.jugador2 is None:
                 sig_partido.jugador2 = ganador
             sig_partido.save()
-
-## Prueba 
-from django.http import JsonResponse
-def prueba_conexion(request):
-
-    return JsonResponse({
-        "status":"ok",
-        "mensaje":"Conexión exitosa con el backend de Django"})
