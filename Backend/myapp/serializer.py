@@ -120,19 +120,20 @@ class UserSerializer(serializers.ModelSerializer):
 
 #Serializer Inscripciones
 class InscripcionesSerializer(serializers.ModelSerializer):
-    # Campos de "Solo Lectura" para que el Frontend muestre texto, no solo IDs
     nombre_jugador = serializers.CharField(source='jugador.username', read_only=True)
     nombre_torneo = serializers.CharField(source='torneo.nombre', read_only=True)
 
     class Meta:
         model = Inscripcion
-        
         fields = '__all__'
-        # Evitamos que el usuario edite estos campos al hacer un POST/PUT
         read_only_fields = ['estado_inscripcion', 'fecha_inscripcion']
 
-    # REGLAS DE NEGOCIO:
     def validate(self, data):
+        # Si la instancia ya existe, significa que es una actualización (como guardar la siembra), 
+        # por lo que saltamos esta validación de perfil.
+        if self.instance is not None:
+            return data
+
         jugador = data.get('jugador')
         torneo = data.get('torneo')
 
@@ -144,10 +145,6 @@ class InscripcionesSerializer(serializers.ModelSerializer):
 
         perfil = jugador.perfil
 
-        # --- REGLA 2: VALIDACIÓN DE RAMA (SEXO) ---
-        # Asumimos que perfil.sexo guarda 'Masculino' o 'Femenino'
-        # Asumimos que torneo.rama guarda 'Varonil', 'Femenil' o 'Mixto'
-        
         # Validación de Rama (Sexo)
         if torneo.rama_torneo == 'Varonil' and perfil.sexo_usuario != 'M':
             raise serializers.ValidationError({"rama": "Inscripción rechazada. El torneo está restringido a la rama Varonil."})
