@@ -36,5 +36,4 @@ urlpatterns = [
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     # Ruta para obtener un nuevo Access Token usando el Refresh Token
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('prueba/', views.prueba_conexion, name='prueba-conexion')
 ]
