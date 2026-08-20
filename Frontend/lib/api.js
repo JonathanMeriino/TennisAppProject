@@ -200,6 +200,16 @@ export const tournaments = {
     return request(`/api/torneo/${id}/inscripciones/`);
   },
 
+  async updateSiembra(inscriptionId, numeroSiembra) {
+    return request(`/api/inscripcion/${inscriptionId}/`, {
+      method : "PATCH",
+      body: JSON.stringify({ numero_siembra: numeroSiembra  ? parseInt(numeroSiembra) : null }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  },
+
   async matches(id) {
     return request(`/api/torneo/${id}/matches`);
   },
