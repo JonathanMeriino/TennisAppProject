@@ -11,7 +11,7 @@ router = routers.DefaultRouter()
 router.register(r'roles', views.RolesViewSet)
 router.register(r'usuario',views.UsuarioViewSet)
 router.register(r'torneo', views.TorneoViewSet)
-router.register(r'inscripciones',views.InscripcionViewSet, basename='inscripciones') # Le damos un basename porque no hay un queryset definido en el viewset
+router.register(r'inscripcion',views.InscripcionViewSet, basename='inscripcion') # Le damos un basename porque no hay un queryset definido en el viewset
 router.register(r'partido', views.PartidoViewSet)
 
 
