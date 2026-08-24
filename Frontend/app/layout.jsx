@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -9,7 +10,6 @@ export const metadata = {
   title: "Tournify - Administrador de Torneos de Tenis",
   description:
     "Plataforma profesional para organizar y administrar torneos de tenis",
-  generator: "v0.app",
   icons: {
     icon: "/icon.svg",
   },
@@ -18,9 +18,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body className={`font-sans antialiased`}>
+      <body>
+        {/* Renderiza las vistas de la aplicación */}
         {children}
-        <Analytics />
+        
+        {/* Componente global de notificaciones flotantes */}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
