@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { tournaments as tournamentsApi, auth } from "@/lib/api";
-
+import { toast } from "sonner";
 const TIME_SLOTS = [
   "08:00 - 10:00",
   "10:00 - 12:00",
@@ -30,6 +30,7 @@ export default function TournamentDetailPage() {
   const [siembraValues, setSiembraValues] = useState({});
   
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -50,6 +51,12 @@ export default function TournamentDetailPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  // Verificar si el usuario ya esta inscrito
+  const usuarioInscrito = participants.some((p) => {
+    const username = p.nombre_jugador || p.jugador_username || p.username;
+    return currentUser && username === currentUser.username;
+  });
+
   const handleCheckboxChange = (day, slot) => {
     setAvailability((prev) => {
       const currentDaySlots = prev[day] || [];
@@ -63,47 +70,78 @@ export default function TournamentDetailPage() {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    setIsRegistering(true);
-    setError("");
-    setSuccessMessage("");
 
     if (Object.keys(availability).length === 0) {
-      setError("Por favor selecciona al menos un horario de disponibilidad.");
-      setIsRegistering(false);
+      toast.warning("Debes seleccionar al menos un horario de disponibilidad antes de inscribirte.");
       return;
     }
 
+    setIsRegistering(true);
+    const loadingToast = toast.loading("Inscribiendo al torneo...");
+
     try {
       await tournamentsApi.join(id, availability);
-      setSuccessMessage("¡Te has inscrito exitosamente!");
+      toast.dismiss(loadingToast);
+      toast.success("¡Inscripción exitosa! Se ha registrado tu disponibilidad.");
       setIsModalOpen(false);
-
+      // REcargar datis dek usuario para refrescar estados si es necesario
       const updatedParticipants = await tournamentsApi.participants(id).catch(() => []);
       setParticipants(Array.isArray(updatedParticipants) ? updatedParticipants : updatedParticipants.results || []);
+
     } catch (err) {
-      setError(err.message || "Hubo un error al intentar inscribirte.");
+      toast.dismiss(loadingToast);
+      const errorMessage = err.message || "Error al inscribirse en el torneo.";
+      toast.error(errorMessage);
     } finally {
       setIsRegistering(false);
     }
   };
+  
+  const handleLeaveTournament = async () => {
+    if (!confirm("¿Estás seguro de que deseas cancelar tu inscripción en este torneo?")) {
+      return;
+    }
+    
+    setIsLeaving(true);
+    const loadingToast = toast.loading("Procesando baja del torneo...");
 
+    try {
+      await tournamentsApi.leave(id);
+      toast.dismiss(loadingToast);
+      toast.success("Te has dado de baja del torneo correctamente.");
+
+      // Actualizar participantes
+      const updatedParticipants = await tournamentsApi.participants(id).catch(() => []);
+      setParticipants(Array.isArray(updatedParticipants) ? updatedParticipants : updatedParticipants.results || []);
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error("Hubo un error al intentar darte de baja.");
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+  
+  
   const handleSiembraChange = (inscripcionId, value) => {
     setSiembraValues((prev) => ({ ...prev, [inscripcionId]: value }));
   };
 
   const handleSaveSiembras = async () => {
+    const loadingToast = toast.loading("Actualizando números de siembra...");
     try {
       const promises = Object.entries(siembraValues).map(([inscId, siembra]) =>
         tournamentsApi.updateSiembra(inscId, siembra)
       );
       await Promise.all(promises);
-      setSuccessMessage("¡Números de siembra actualizados correctamente!");
+      toast.dismiss(loadingToast);
+      toast.success("¡Números de siembra actualizados correctamente!");
       setIsSiembraModalOpen(false);
 
       const updatedParticipants = await tournamentsApi.participants(id).catch(() => []);
       setParticipants(Array.isArray(updatedParticipants) ? updatedParticipants : updatedParticipants.results || []);
     } catch (err) {
-      setError("Error al guardar las siembras.");
+      toast.dismiss(loadingToast);
+      toast.error("Error al guardar las siembras.");
     }
   };
 
@@ -125,25 +163,24 @@ export default function TournamentDetailPage() {
             </h1>
           </div>
           
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn-primary px-6 py-2 whitespace-nowrap"
-          >
-            Inscribirme al Torneo
-          </button>
+          {/* Botón dinámico: Inscribirse o Darse de baja */}
+          {usuarioInscrito ? (
+            <button
+              onClick={handleLeaveTournament}
+              disabled={isLeaving}
+              className="bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 font-medium px-6 py-2 rounded-lg transition-colors whitespace-nowrap text-sm"
+            >
+              {isLeaving ? "Procesando baja..." : "Darse de baja del torneo"}
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary px-6 py-2 whitespace-nowrap"
+            >
+              Inscribirme al Torneo
+            </button>
+          )}
         </div>
-
-        {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
-            ⚠️ {error}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="bg-primary/10 text-primary text-sm p-3 rounded-lg border border-primary/20">
-            ✅ {successMessage}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border text-sm text-muted-foreground">
           <div>
@@ -202,12 +239,24 @@ export default function TournamentDetailPage() {
             </p>
             
             {participants.length > 0 && (
-              <button
-                onClick={() => setIsSiembraModalOpen(true)}
-                className="btn-primary text-xs py-2 px-4 w-full text-center mt-2"
-              >
-                Ingresar números de siembra
-              </button>
+              <div className="space-y-2 mt-2">
+                <button
+                  onClick={() => setIsSiembraModalOpen(true)}
+                  className="btn-primary text-xs py-2 px-4 w-full text-center"
+                >
+                  Ingresar números de siembra
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Acción provisional que no afecta la lógica todavía
+                    alert("Función de generación de llaves en desarrollo.");
+                  }}
+                  className="btn-outline text-xs py-2 px-4 w-full text-center"
+                >
+                  Generar llaves de enfrentamientos
+                </button>
+              </div>
             )}
           </div>
 
