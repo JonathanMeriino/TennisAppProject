@@ -196,6 +196,12 @@ export const tournaments = {
     });
   },
 
+  async leave(tournamentId) {
+    return request(`/api/torneo/${tournamentId}/cancelar_inscripcion/`, {
+      method: "DELETE",
+    });
+  },
+
   async participants(id) {
     return request(`/api/torneo/${id}/inscripciones/`);
   },
