@@ -152,6 +152,22 @@ class TorneoViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Ya estás inscrito en este torneo."}, status=status.HTTP_400_BAD_REQUEST)
             
         return Response({"detail": "Inscripción exitosa."}, status=status.HTTP_201_CREATED)
+
+    # Cancelar / dar de baja inscripcion
+    @action(detail=True, methods=['delete'])
+    def cancelar_inscripcion(self, request, pk=None):
+        torneo = self.get_object()
+        user = request.user
+        
+        try:
+            inscripcion = Inscripcion.objects.get(torneo=torneo, jugador=user)
+            inscripcion.delete()
+            return Response({"detail": "Inscripción cancelada exitosamente."}, status=status.HTTP_200_OK)
+        except Inscripcion.DoesNotExist:
+            return Response({"detail": "No estás inscrito en este torneo."}, status=status.HTTP_404_NOT_FOUND)
+
+
+        
     @action(detail=True, methods=['get'])
     def inscripciones(self, request, pk=None):
         torneo = self.get_object()
