@@ -182,7 +182,7 @@ export default function TournamentDetailPage() {
                   className="flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 text-sm"
                 >
                   <span className="font-medium text-foreground">
-                    {participant.jugador_username || participant.username || participant.jugador_nombre || `Participante ${index + 1}`}
+                    {participant.nombre_jugador || participant.jugador_username || participant.username || `Participante ${index + 1}`}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
@@ -298,7 +298,7 @@ export default function TournamentDetailPage() {
               {participants.map((p) => (
                 <div key={p.id_inscripcion} className="flex items-center justify-between gap-4 p-2.5 border border-border rounded-lg bg-card/50">
                   <span className="text-sm font-medium text-foreground">
-                    {p.jugador_username || p.username || p.jugador_nombre || "Participante"}
+                    {p.nombre_jugador || p.jugador_username || p.username || "Participante"}
                   </span>
                   <input
                     type="number"
