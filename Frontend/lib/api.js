@@ -215,6 +215,11 @@ export const tournaments = {
       },
     });
   },
+  async generateBrackets(tournamentId) {
+    return request(`/api/torneo/${tournamentId}/generar-bracket /`, {
+      method: "POST",
+    });
+  },
 
   async matches(id) {
     return request(`/api/torneo/${id}/matches`);
