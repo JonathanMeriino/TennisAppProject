@@ -76,7 +76,7 @@ class Torneo(models.Model):
         ('Mixto', 'Mixto'),
     ]
     rama_torneo = models.CharField(max_length=50, choices=RAMA_CHOICES, default='Varonil') # Ej: Varonil, Femenil, Mixto
-    
+    canchas_disponibles = models.PositiveIntegerField(default=1, help_text="Número de canchas habilitadas para este torneo")
 
     ESTADO_CHOICES = [
         ('Programado', 'Programado'),
@@ -100,7 +100,7 @@ class Inscripcion(models.Model):
     # Campos estratégicos para la Eliminación Directa
     numero_siembra = models.PositiveIntegerField(null=True, blank=True)
     matriz_disponibilidad = models.JSONField(null=True, blank=True) 
-    estado_inscripcion = models.CharField(max_length=50, default='Pendiente')
+    #estado_inscripcion = models.CharField(max_length=50, default='Pendiente')
     fecha_inscripcion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
