@@ -126,7 +126,7 @@ class InscripcionesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inscripcion
         fields = '__all__'
-        read_only_fields = ['estado_inscripcion', 'fecha_inscripcion']
+        read_only_fields = ['fecha_inscripcion']
 
     def validate(self, data):
         # Si la instancia ya existe, significa que es una actualización (como guardar la siembra), 
