@@ -225,6 +225,10 @@ export const tournaments = {
     });
   },
 
+  async getPartidos(tournamentId) {
+    return request(`/api/torneo/${tournamentId}/partidos/`);
+  },
+  
   async matches(id) {
     return request(`/api/torneo/${id}/matches`);
   },
