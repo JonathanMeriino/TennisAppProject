@@ -182,6 +182,13 @@ class TorneoViewSet(viewsets.ModelViewSet):
         serializer = TorneoSerializer(torneos_inscritos, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def partidos(self, request, pk=None):
+        torneo = self.get_object()
+        partidos = torneo.partidos.all()  
+        serializer = PartidoSerializer(partidos, many=True)
+        return Response(serializer.data)
+
 class InscripcionViewSet(viewsets.ModelViewSet):
     serializer_class = InscripcionesSerializer
     permission_classes = [permissions.IsAuthenticated]
