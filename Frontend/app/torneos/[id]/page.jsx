@@ -240,6 +240,7 @@ export default function TournamentDetailPage() {
             
             {participants.length > 0 && (
               <div className="space-y-2 mt-2">
+               {/* Botón para abrir el modal de siembras */}
                 <button
                   onClick={() => setIsSiembraModalOpen(true)}
                   className="btn-primary text-xs py-2 px-4 w-full text-center"
@@ -247,15 +248,27 @@ export default function TournamentDetailPage() {
                   Ingresar números de siembra
                 </button>
 
+                {/* Botón para disparar el algoritmo en Django */}
                 <button
-                  onClick={() => {
-                    // Acción provisional que no afecta la lógica todavía
-                    alert("Función de generación de llaves en desarrollo.");
+                  onClick={async () => {
+                    const loadingToast = toast.loading("Generando cuadro de eliminación directa...");
+                    try {
+                      await tournamentsApi.generateBrackets(id);
+                      toast.dismiss(loadingToast);
+                      toast.success("¡Llaves de enfrentamientos generadas con éxito!");
+                      window.location.reload(); 
+                    } catch (err) {
+                      toast.dismiss(loadingToast);
+                      const errorMsg = err.error || err.detail || "Error al generar las llaves.";
+                      toast.error(errorMsg);
+                    }
                   }}
-                  className="btn-outline text-xs py-2 px-4 w-full text-center"
-                >
-                  Generar llaves de enfrentamientos
+                    className="btn-outline text-xs py-2 px-4 w-full text-center"
+                  >
+                    Generar llaves de enfrentamientos
                 </button>
+
+                
               </div>
             )}
           </div>
