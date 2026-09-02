@@ -109,22 +109,26 @@ async function request(path, { method = "GET", body, headers = {}, isForm = fals
 }*/
 // Ajusta esto en tu archivo donde definiste la función 'request'
 async function request(url, options = {}) {
-  const token = localStorage.getItem("access_token"); // O el nombre que uses
-  
+  const token = localStorage.getItem("access_token");
+
+  // Construimos las cabeceras asegurando que el token vaya primero o se fusione correctamente
   const headers = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
   };
-
-  // Si tenemos un token, lo agregamos a la cabecera Authorization
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
 
   const response = await fetch(`http://localhost:8000${url}`, {
     ...options,
     headers,
   });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw errorData;
+  }
+
+  if (response.status === 204) return null;
 
   return response.json();
 }
@@ -216,7 +220,7 @@ export const tournaments = {
     });
   },
   async generateBrackets(tournamentId) {
-    return request(`/api/torneo/${tournamentId}/generar-bracket /`, {
+    return request(`/api/torneo/${tournamentId}/generar_bracket/`, {
       method: "POST",
     });
   },
