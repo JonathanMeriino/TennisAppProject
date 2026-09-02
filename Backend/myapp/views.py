@@ -68,7 +68,7 @@ class TorneoViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticatedOrReadOnly]
         return [permission() for permission in permission_classes]
 
-    @action(detail=True, methods=['post'], url_path='generar-bracket')
+    @action(detail=True, methods=['post'], url_path='generar_bracket')
     def generar_bracket(self, request, pk=None):
         """
         Algoritmo para construir el cuadro de eliminación directa
@@ -77,7 +77,7 @@ class TorneoViewSet(viewsets.ModelViewSet):
         torneo = self.get_object()
         
         # 1. Filtrar solo inscripciones aprobadas y ordenadas por siembra (seed)
-        inscripciones = list(Inscripcion.objects.filter(torneo=torneo, estado_inscripcion='Aceptada').order_by('numero_siembra'))
+        inscripciones = list(Inscripcion.objects.filter(torneo=torneo).order_by('numero_siembra'))
         num_jugadores = len(inscripciones)
         
         if num_jugadores < 2:
@@ -119,45 +119,19 @@ class TorneoViewSet(viewsets.ModelViewSet):
             
             partidos_por_ronda[r] = creados_en_ronda
 
-        # 3. Distribución simétrica de jugadores y Byes en los partidos de la Ronda 1
-        def generar_orden_siembra(tam):
-            """Genera la secuencia simétrica de enfrentamientos para una potencia de 2"""
-            if tam == 1:
-                return [1]
-            prev = generar_orden_siembra(tam // 2)
-            res = []
-            for item in prev:
-                res.append(item)
-                res.append(tam + 1 - item)
-            return res
-
-        slots_jugadores = [None] * potencia_superior
-        inscripciones_ordenadas = list(inscripciones)
-        patron_indices = generar_orden_siembra(potencia_superior)
-        
-        # Asignamos los jugadores reales a las posiciones correspondientes del patrón simétrico
-        for idx, jugador_inscripcion in enumerate(inscripciones_ordenadas):
-            if idx < potencia_superior:
-                posicion_teorica = patron_indices.index(idx + 1)
-                slots_jugadores[posicion_teorica] = jugador_inscripcion
-
+        # 3. Sembrar a los jugadores reales en los partidos de la Ronda 1
         partidos_primera_ronda = partidos_por_ronda[1]
-        
-        # Rellenamos los partidos de la primera ronda de 2 en 2 slots del cuadro ideal
-        for i, part in enumerate(partidos_primera_ronda):
-            jugadorA = slots_jugadores[i * 2]
-            jugadorB = slots_jugadores[(i * 2) + 1]
-            
-            part.jugador1 = jugadorA  # Si es None, representa un Bye técnico
-            part.jugador2 = jugadorB  # Si es None, representa un Bye técnico
+        idx = 0
+        for part in list(partidos_primera_ronda):
+            if idx < num_jugadores:
+                part.jugador1 = inscripciones[idx]
+                idx += 1
+            if idx < num_jugadores:
+                part.jugador2 = inscripciones[idx]
+                idx += 1
             part.save()
 
-        return Response({
-            "status": f"Cuadro de eliminación directa generado con éxito.",
-            "jugadores_totales": num_jugadores,
-            "capacidad_ideal": potencia_superior,
-            "byes_asignados": potencia_superior - num_jugadores
-        }, status=status.HTTP_201_CREATED)
+        return Response({"status": f"Cuadro de eliminación directa creado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods = ['post'])
     def inscribir(self, request, pk=None):
