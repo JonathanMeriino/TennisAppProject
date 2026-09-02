@@ -31,6 +31,7 @@ export default function TournamentDetailPage() {
   
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [matches, setMatches] = useState([]);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -40,11 +41,13 @@ export default function TournamentDetailPage() {
     Promise.all([
       tournamentsApi.get(id),
       tournamentsApi.participants ? tournamentsApi.participants(id).catch(() => []) : Promise.resolve([]),
+      tournamentsApi.getPartidos(id).catch(() => []),
       auth.me().catch(() => null)
     ])
-      .then(([tournamentData, participantsData, userData]) => {
+      .then(([tournamentData, participantsData, matchesData, userData]) => {
         setTournament(tournamentData);
         setParticipants(Array.isArray(participantsData) ? participantsData : participantsData.results || []);
+        setMatches(Array.isArray(matchesData) ? matchesData : matchesData.results || []);
         setCurrentUser(userData);
       })
       .catch(() => setError("Error al cargar la información del torneo."))
@@ -392,7 +395,67 @@ export default function TournamentDetailPage() {
             </div>
           </div>
         </div>
+
+        
       )}
+      {/* Sección Visual del Bracket en la página del torneo */}
+<div className="card-base p-6 space-y-4">
+  <h3 className="text-lg font-bold text-foreground">Bracket / Árbol del Torneo</h3>
+  
+  {matches.length === 0 ? (
+    <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+      Diagrama de llaves pendiente de generación.
+    </div>
+  ) : (
+    <div className="flex overflow-x-auto gap-8 py-4">
+      {/* Agrupamos los partidos por fases ordenadas */}
+      {["Ronda de 16", "Cuartos de Final", "Semifinal", "Final"].map((fase) => {
+        const partidosFase = matches.filter((m) => m.fase === fase);
+        if (partidosFase.length === 0) return null;
+
+        return (
+          <div key={fase} className="flex flex-col justify-around min-w-[220px] space-y-4">
+            <h4 className="text-xs font-bold text-center text-primary uppercase tracking-wider bg-primary/10 py-1.5 rounded">
+              {fase}
+            </h4>
+            
+            <div className="space-y-4 flex flex-col justify-around h-full">
+              {partidosFase.map((partido) => (
+                <div key={partido.id || partido.id_partido} className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs">
+                  {/* Jugador 1 */}
+                  <div className={`flex justify-between items-center p-1.5 rounded ${partido.jugador1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
+                    <span className="font-medium text-foreground">
+                      {partido.username_j1 || "Bye / Por definir"}
+                    </span>
+                    {partido.jugador1?.numero_siembra && (
+                      <span className="text-[10px] text-muted-foreground">#{partido.jugador1.numero_siembra}</span>
+                    )}
+                  </div>
+
+                  <div className="border-t border-border/50"></div>
+
+                  {/* Jugador 2 */}
+                  <div className={`flex justify-between items-center p-1.5 rounded ${partido.jugador2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
+                    <span className="font-medium text-foreground">
+                      {partido.username_j2 || "Bye / Por definir"}
+                    </span>
+                    {partido.jugador2?.numero_siembra && (
+                      <span className="text-[10px] text-muted-foreground">#{partido.jugador2.numero_siembra}</span>
+                    )}
+                  </div>
+
+                  <div className="text-[10px] text-center font-medium text-muted-foreground pt-1">
+                    Estado: <span className="text-foreground">{partido.estado || "Pendiente"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</div>
     </div>
   );
 }
