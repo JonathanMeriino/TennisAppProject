@@ -32,6 +32,9 @@ export default function TournamentDetailPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [matches, setMatches] = useState([]);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -399,63 +402,161 @@ export default function TournamentDetailPage() {
         
       )}
       {/* Sección Visual del Bracket en la página del torneo */}
-<div className="card-base p-6 space-y-4">
-  <h3 className="text-lg font-bold text-foreground">Bracket / Árbol del Torneo</h3>
-  
-  {matches.length === 0 ? (
-    <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
-      Diagrama de llaves pendiente de generación.
-    </div>
-  ) : (
-    <div className="flex overflow-x-auto gap-8 py-4">
-      {/* Agrupamos los partidos por fases ordenadas */}
-      {["Ronda de 16", "Cuartos de Final", "Semifinal", "Final"].map((fase) => {
-        const partidosFase = matches.filter((m) => m.fase === fase);
-        if (partidosFase.length === 0) return null;
+      <div className="card-base p-6 space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Bracket / Árbol del Torneo</h3>
+        
+        {matches.length === 0 ? (
+          <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+            Diagrama de llaves pendiente de generación.
+          </div>
+        ) : (
+          <div className="flex overflow-x-auto gap-8 py-4">
+            {/* Agrupamos los partidos por fases ordenadas */}
+            {["Ronda de 16", "Cuartos de Final", "Semifinal", "Final"].map((fase) => {
+              const partidosFase = matches.filter((m) => m.fase === fase);
+              if (partidosFase.length === 0) return null;
 
-        return (
-          <div key={fase} className="flex flex-col justify-around min-w-[220px] space-y-4">
-            <h4 className="text-xs font-bold text-center text-primary uppercase tracking-wider bg-primary/10 py-1.5 rounded">
-              {fase}
-            </h4>
-            
-            <div className="space-y-4 flex flex-col justify-around h-full">
-              {partidosFase.map((partido) => (
-                <div key={partido.id || partido.id_partido} className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs">
-                  {/* Jugador 1 */}
-                  <div className={`flex justify-between items-center p-1.5 rounded ${partido.jugador1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
-                    <span className="font-medium text-foreground">
-                      {partido.username_j1 || "Bye / Por definir"}
-                    </span>
-                    {partido.jugador1?.numero_siembra && (
-                      <span className="text-[10px] text-muted-foreground">#{partido.jugador1.numero_siembra}</span>
-                    )}
-                  </div>
+              return (
+                <div key={fase} className="flex flex-col justify-around min-w-[220px] space-y-4">
+                  <h4 className="text-xs font-bold text-center text-primary uppercase tracking-wider bg-primary/10 py-1.5 rounded">
+                    {fase}
+                  </h4>
+                  
+                  <div className="space-y-4 flex flex-col justify-around h-full">
+                    {partidosFase.map((partido) => (
+                      <div key={partido.id || partido.id_partido} className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs">
+                        {/* Jugador 1 */}
+                        <div className={`flex justify-between items-center p-1.5 rounded ${partido.jugador1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
+                          <span className="font-medium text-foreground">
+                            {partido.username_j1 || "Bye / Por definir"}
+                          </span>
+                          {partido.jugador1?.numero_siembra && (
+                            <span className="text-[10px] text-muted-foreground">#{partido.jugador1.numero_siembra}</span>
+                          )}
+                        </div>
 
-                  <div className="border-t border-border/50"></div>
+                        <div className="border-t border-border/50"></div>
 
-                  {/* Jugador 2 */}
-                  <div className={`flex justify-between items-center p-1.5 rounded ${partido.jugador2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
-                    <span className="font-medium text-foreground">
-                      {partido.username_j2 || "Bye / Por definir"}
-                    </span>
-                    {partido.jugador2?.numero_siembra && (
-                      <span className="text-[10px] text-muted-foreground">#{partido.jugador2.numero_siembra}</span>
-                    )}
-                  </div>
+                        {/* Jugador 2 */}
+                        <div className={`flex justify-between items-center p-1.5 rounded ${partido.jugador2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
+                          <span className="font-medium text-foreground">
+                            {partido.username_j2 || "Bye / Por definir"}
+                          </span>
+                          {partido.jugador2?.numero_siembra && (
+                            <span className="text-[10px] text-muted-foreground">#{partido.jugador2.numero_siembra}</span>
+                          )}
+                        </div>
 
-                  <div className="text-[10px] text-center font-medium text-muted-foreground pt-1">
-                    Estado: <span className="text-foreground">{partido.estado || "Pendiente"}</span>
+                        {/* Estaodo y boton de registro de resultado */}
+                        <div className="pt-2 border-t border-border/50 flex justify-between items-center">
+                          <span className="text-[10px] text-muted-foreground">
+                            Estado: <span className="text-foreground">{partido.estado || "Pendiente"}</span>
+                          </span>
+                          
+                          {partido.estado !== "Finalizado" && partido.username_j1 && partido.username_j2 && (
+                            <button
+                              onClick={() => {
+                                setSelectedMatch(partido);
+                                setIsResultModalOpen(true);
+                              }}
+                              className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 px-2 py-1 rounded transition-colors font-medium"
+                            >
+                              Registrar Resultado
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              );
+            })}
+          </div>
+          
+        )}
+      </div>
+      {/* MODAL PARA REGISTRAR RESULTADO DE PARTIDO */}
+      {isResultModalOpen && selectedMatch && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="card-base bg-card p-6 max-w-sm w-full space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Registrar Marcador</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Ingresa los sets ganados por cada competidor</p>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              {/* Sets Jugador 1 */}
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-foreground truncate max-w-[160px]">
+                  {selectedMatch.username_j1}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  id="setsJ1"
+                  className="input-field w-16 text-center py-1 text-sm"
+                  defaultValue="0"
+                />
+              </div>
+
+              {/* Sets Jugador 2 */}
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-foreground truncate max-w-[160px]">
+                  {selectedMatch.username_j2}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  id="setsJ2"
+                  className="input-field w-16 text-center py-1 text-sm"
+                  defaultValue="0"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsResultModalOpen(false)}
+                className="btn-outline flex-1 text-xs py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const sets1 = document.getElementById("setsJ1").value;
+                  const sets2 = document.getElementById("setsJ2").value;
+                  
+                  const winnerId = parseInt(sets1) > parseInt(sets2) 
+                    ? selectedMatch.jugador1 
+                    : selectedMatch.jugador2;
+
+                  const loadingToast = toast.loading("Guardando resultado...");
+                  try {
+                    await tournamentsApi.createResult(
+                      selectedMatch.id || selectedMatch.id_partido, 
+                      sets1, 
+                      sets2, 
+                      winnerId
+                    );
+                    toast.dismiss(loadingToast);
+                    toast.success("¡Resultado registrado y ganador avanzado!");
+                    setIsResultModalOpen(false);
+                    window.location.reload();
+                  } catch (err) {
+                    toast.dismiss(loadingToast);
+                    toast.error("Error al registrar el resultado.");
+                  }
+                }}
+                className="btn-primary flex-1 text-xs py-2"
+              >
+                Guardar
+              </button>
             </div>
           </div>
-        );
-      })}
-    </div>
-  )}
-</div>
+        </div>
+      )}
     </div>
   );
 }
