@@ -228,16 +228,21 @@ export const tournaments = {
   async getPartidos(tournamentId) {
     return request(`/api/torneo/${tournamentId}/partidos/`);
   },
-  
+
   async matches(id) {
     return request(`/api/torneo/${id}/matches`);
   },
 
-  async reportResult(tournamentId, matchId, result) {
-    return request(
-      `/api/torneo/${tournamentId}/matches/${matchId}/result`,
-      { method: "POST", body: result },
-    );
+  async reportResult(partidoId, setsJ1, setsJ2, ganadorInscripcionId) {
+    return request ('/api/resultads/', {
+      method: 'POST',
+      body: JSON.stringify({
+        partido: partidoId,
+        sets_j1: parseInt(setsJ1),
+        sets_j2: parseInt(setsJ2),
+        ganador_inscripcion: ganadorInscripcionId,
+      }),
+    });
   },
 
   async myTournaments() {
