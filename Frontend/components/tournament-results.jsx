@@ -83,6 +83,7 @@ export default function TournamentResults({ matches, tournamentId }) {
             </div>
             
             <div className="space-y-3 text-sm">
+              {/* Jugador 1 */}
               <div className="flex justify-between items-center">
                 <span className="font-medium text-foreground truncate max-w-[160px]">
                   {selectedMatch.username_j1}
@@ -96,6 +97,7 @@ export default function TournamentResults({ matches, tournamentId }) {
                 />
               </div>
 
+              {/* Jugador 2 */}
               <div className="flex justify-between items-center">
                 <span className="font-medium text-foreground truncate max-w-[160px]">
                   {selectedMatch.username_j2}
@@ -121,17 +123,21 @@ export default function TournamentResults({ matches, tournamentId }) {
               <button
                 type="button"
                 onClick={async () => {
+                  // Capturamos los valores directamente de los inputs
                   const sets1 = document.getElementById("setsJ1").value;
                   const sets2 = document.getElementById("setsJ2").value;
                   
+                  // Obtenemos los IDs de las inscripciones de jugador1 y jugador2 de forma segura
                   const j1Id = typeof selectedMatch.jugador1 === 'object' ? selectedMatch.jugador1?.id_inscripcion || selectedMatch.jugador1?.id : selectedMatch.jugador1;
                   const j2Id = typeof selectedMatch.jugador2 === 'object' ? selectedMatch.jugador2?.id_inscripcion || selectedMatch.jugador2?.id : selectedMatch.jugador2;
 
+                  // Determinamos el ganador comparando numéricamente los sets
                   const winnerId = parseInt(sets1) > parseInt(sets2) ? j1Id : j2Id;
 
                   const loadingToast = toast.loading("Guardando resultado...");
                   try {
-                    await tournaments.createResult(
+                    // Llamada exacta adaptada a tu estructura de base de datos
+                    await tournaments.reportResult(
                       selectedMatch.id || selectedMatch.id_partido, 
                       sets1, 
                       sets2, 
