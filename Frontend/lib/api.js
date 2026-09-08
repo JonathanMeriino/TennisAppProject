@@ -234,7 +234,7 @@ export const tournaments = {
   },
 
   async reportResult(partidoId, setsJ1, setsJ2, ganadorInscripcionId) {
-    return request ('/api/resultads/', {
+    return request ('/api/resultados/', {
       method: 'POST',
       body: JSON.stringify({
         partido: partidoId,
