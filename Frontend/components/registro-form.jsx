@@ -14,6 +14,7 @@ export function RegistroForm() {
     age: "",
     category: "",
     boleta: "",
+    escuela: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,10 +62,12 @@ export function RegistroForm() {
           perfil: {
             boleta_usuario: formData.boleta,
             edad_usuario: parseInt(formData.age),
+            escuela_usuario: formData.escuela,
             sexo_usuario: formData.sexo,
             rol: 2,
             categoria: parseInt(formData.category)
-          }
+          },
+          
         }),
       });
       const data = await respuesta.json();
@@ -232,6 +235,17 @@ export function RegistroForm() {
               onChange={handleChange}
               required
               className="input-field"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-foreground block">Escuela / Institución</label>
+            <input
+              type="text"
+              name="escuela"
+              value={formData.escuela}
+              onChange={handleChange}
+              placeholder="Ej. IPN - ESCOM"
+              className="input-field w-full py-2 px-3 text-sm rounded-lg border border-border bg-card"
             />
           </div>
 
