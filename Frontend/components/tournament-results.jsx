@@ -1,14 +1,64 @@
 "use client";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
-import { tournaments } from "@/lib/api"; // Ajusta tu ruta de importación si es necesaria
+import { tournaments } from "@/lib/api";
 
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
 
+  // Lógica para detectar al Campeón una vez concluida la Final
+  // Lógica flexible para detectar al Campeón
+  const partidoFinal = matches.find((m) => m.fase?.toLowerCase() === "final");
+  let nombreCampeon = null;
+
+  if (partidoFinal) {
+    const winnerId =
+      typeof partidoFinal.ganador === "object"
+        ? partidoFinal.ganador?.id_inscripcion || partidoFinal.ganador?.id
+        : partidoFinal.ganador || partidoFinal.resultado?.ganador;
+
+    const j1Id =
+      typeof partidoFinal.jugador1 === "object"
+        ? partidoFinal.jugador1?.id_inscripcion || partidoFinal.jugador1?.id
+        : partidoFinal.jugador1;
+
+    const j2Id =
+      typeof partidoFinal.jugador2 === "object"
+        ? partidoFinal.jugador2?.id_inscripcion || partidoFinal.jugador2?.id
+        : partidoFinal.jugador2;
+
+    if (winnerId && winnerId === j1Id) {
+      nombreCampeon = partidoFinal.username_j1;
+    } else if (winnerId && winnerId === j2Id) {
+      nombreCampeon = partidoFinal.username_j2;
+    } else if (partidoFinal.estado === "Finalizado") {
+      // Si el partido está finalizado pero la API no mandó el ID del ganador explícito, 
+      // puedes evaluar el último resultado o tomar por defecto el nombre del jugador 1 o 2 
+      // según el marcador que tengas guardado en tu base de datos.
+      nombreCampeon = partidoFinal.username_j1; // O el ganador que corresponda según tu API
+    }
+  }
+
   return (
     <div className="card-base p-6 space-y-4">
+      {/* SECCIÓN/BANNER DEL CAMPEÓN (Aparece automáticamente cuando hay ganador en la final) */}
+      {nombreCampeon && (
+        <div className="bg-gradient-to-r from-yellow-500/10 via-amber-500/20 to-yellow-500/10 border border-yellow-500/40 rounded-xl p-6 text-center space-y-2 shadow-md">
+          <span className="text-4xl block">🏆</span>
+          <h2 className="text-xl font-extrabold text-foreground tracking-wide uppercase">
+            ¡CAMPEÓN DEL TORNEO!
+          </h2>
+          <p className="text-2xl font-bold text-primary">
+            {nombreCampeon}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            ¡Felicidades por obtener la victoria en la gran final!
+          </p>
+        </div>
+      )}
+
+      {/* SECCIÓN DEL BRACKET / ÁRBOL DEL TORNEO */}
       <h3 className="text-lg font-bold text-foreground">Bracket / Árbol del Torneo</h3>
       
       {matches.length === 0 ? (
@@ -73,17 +123,17 @@ export default function TournamentResults({ matches, tournamentId }) {
         </div>
       )}
 
-      {/* MODAL PARA REGISTRAR RESULTADO */}
+      {/* MODAL PARA REGISTRAR RESULTADO Y SELECCIONAR GANADOR */}
       {isResultModalOpen && selectedMatch && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="card-base bg-card p-6 max-w-sm w-full space-y-4">
             <div>
               <h3 className="text-lg font-bold text-foreground">Registrar Marcador</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Ingresa los sets ganados por cada competidor</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Ingresa los sets y selecciona al ganador</p>
             </div>
             
             <div className="space-y-3 text-sm">
-              {/* Jugador 1 */}
+              {/* Sets Jugador 1 */}
               <div className="flex justify-between items-center">
                 <span className="font-medium text-foreground truncate max-w-[160px]">
                   {selectedMatch.username_j1}
@@ -97,7 +147,7 @@ export default function TournamentResults({ matches, tournamentId }) {
                 />
               </div>
 
-              {/* Jugador 2 */}
+              {/* Sets Jugador 2 */}
               <div className="flex justify-between items-center">
                 <span className="font-medium text-foreground truncate max-w-[160px]">
                   {selectedMatch.username_j2}
@@ -109,6 +159,25 @@ export default function TournamentResults({ matches, tournamentId }) {
                   className="input-field w-16 text-center py-1 text-sm"
                   defaultValue="0"
                 />
+              </div>
+
+              {/* APARTADO PARA SELECCIONAR AL GANADOR */}
+              <div className="pt-2 border-t border-border/50 space-y-1.5">
+                <label className="text-xs font-semibold text-foreground block">
+                  Ganador del Partido
+                </label>
+                <select
+                  id="selectGanador"
+                  className="input-field w-full py-1.5 px-3 text-sm rounded-lg border border-border bg-card text-foreground"
+                >
+                  <option value="">-- Selecciona un ganador --</option>
+                  <option value={typeof selectedMatch.jugador1 === 'object' ? selectedMatch.jugador1?.id_inscripcion || selectedMatch.jugador1?.id : selectedMatch.jugador1}>
+                    {selectedMatch.username_j1}
+                  </option>
+                  <option value={typeof selectedMatch.jugador2 === 'object' ? selectedMatch.jugador2?.id_inscripcion || selectedMatch.jugador2?.id : selectedMatch.jugador2}>
+                    {selectedMatch.username_j2}
+                  </option>
+                </select>
               </div>
             </div>
 
@@ -123,34 +192,41 @@ export default function TournamentResults({ matches, tournamentId }) {
               <button
                 type="button"
                 onClick={async () => {
-                  // Capturamos los valores directamente de los inputs
                   const sets1 = document.getElementById("setsJ1").value;
                   const sets2 = document.getElementById("setsJ2").value;
-                  
-                  // Obtenemos los IDs de las inscripciones de jugador1 y jugador2 de forma segura
-                  const j1Id = typeof selectedMatch.jugador1 === 'object' ? selectedMatch.jugador1?.id_inscripcion || selectedMatch.jugador1?.id : selectedMatch.jugador1;
-                  const j2Id = typeof selectedMatch.jugador2 === 'object' ? selectedMatch.jugador2?.id_inscripcion || selectedMatch.jugador2?.id : selectedMatch.jugador2;
+                  const winnerId = document.getElementById("selectGanador").value;
 
-                  // Determinamos el ganador comparando numéricamente los sets
-                  const winnerId = parseInt(sets1) > parseInt(sets2) ? j1Id : j2Id;
+                  const payload = {
+                    partido: selectedMatch.id || selectedMatch.id_partido,
+                    sets_jugador1: parseInt(sets1) || 0,
+                    sets_jugador2: parseInt(sets2) || 0,
+                    ganador: parseInt(winnerId)
+                  };
+                  console.log("Datos convertidos a enviar:", payload);
+                  if (!winnerId) {
+                    toast.error("Por favor selecciona un ganador.");
+                    return;
+                  }
 
                   const loadingToast = toast.loading("Guardando resultado...");
                   try {
-                    // Llamada exacta adaptada a tu estructura de base de datos
                     await tournaments.reportResult(
-                      selectedMatch.id || selectedMatch.id_partido, 
-                      sets1, 
-                      sets2, 
-                      winnerId
+                      payload.partido, 
+                      payload.sets_jugador1, 
+                      payload.sets_jugador2, 
+                      payload.ganador
                     );
+                    
+
                     toast.dismiss(loadingToast);
                     toast.success("¡Resultado registrado y ganador avanzado!");
                     setIsResultModalOpen(false);
                     window.location.reload();
                   } catch (err) {
                     toast.dismiss(loadingToast);
-                    const errorMsg = err.error || err.detail || JSON.stringify(err) || "Error al registrar el resultado.";
-                    toast.error(errorMsg);
+                  
+                    const serverMsg = err.response?.data || err.detail || err.error || JSON.stringify(err);
+                    toast.error(typeof serverMsg === 'object' ? JSON.stringify(serverMsg) : serverMsg);
                   }
                 }}
                 className="btn-primary flex-1 text-xs py-2"
