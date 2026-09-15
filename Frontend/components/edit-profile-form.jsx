@@ -17,6 +17,7 @@ export function EditProfileForm() {
     edad: "",
     categoria: "",
     boleta: "",
+    escuela: "",
   });
 /*
   const [passwords, setPasswords] = useState({
@@ -40,6 +41,7 @@ export function EditProfileForm() {
         const edadVal = user.edad !== undefined ? user.edad : perfilData.edad_usuario;
         const categoriaVal = user.categoria !== undefined ? user.categoria : perfilData.categoria;
         const boletaVal = perfilData.boleta_usuario || "";
+        const escuelaVal = perfilData.escuela_usuario || perfilData.escuela || "";
 
         setFormData({
           nombres: user.first_name || "",
@@ -50,6 +52,7 @@ export function EditProfileForm() {
           edad: edadVal != null ? String(edadVal) : "",
           categoria: categoriaVal != null ? String(categoriaVal) : "",
           boleta: boletaVal,
+          escuela: escuelaVal,
         });
       })
       .catch((err) => setError(err.message));
@@ -99,6 +102,7 @@ export function EditProfileForm() {
         edad: Number.parseInt(formData.edad),
         categoria: formData.categoria,
         boleta: formData.boleta,
+        escuela: formData.escuela,
       };
 /*
       if (passwords.newPassword) {
@@ -262,6 +266,18 @@ export function EditProfileForm() {
                 onChange={handleChange}
                 disabled
                 className="input-field opacity-60 cursor-not-allowed bg-muted"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground block">Escuela</label>
+              <input
+                type="text"
+                name="escuela"
+                value={formData.escuela}
+                onChange={handleChange}
+                className="input-field w-full py-2 px-3 text-sm rounded-lg border border-border bg-card text-foreground"
+                
               />
             </div>
 
