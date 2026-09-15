@@ -238,9 +238,9 @@ export const tournaments = {
       method: 'POST',
       body: JSON.stringify({
         partido: partidoId,
-        sets_j1: parseInt(setsJ1),
-        sets_j2: parseInt(setsJ2),
-        ganador_inscripcion: ganadorInscripcionId,
+        sets_jugador1: parseInt(setsJ1),
+        sets_jugador2: parseInt(setsJ2),
+        ganador: ganadorInscripcionId,
       }),
     });
   },
