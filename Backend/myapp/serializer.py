@@ -163,7 +163,7 @@ class InscripcionesSerializer(serializers.ModelSerializer):
 class PartidoSerializer(serializers.ModelSerializer):
     username_j1 = serializers.CharField(source='jugador1.jugador.username', read_only=True)
     username_j2 = serializers.CharField(source='jugador2.jugador.username', read_only=True)
-
+    username_ganador = serializers.CharField(source='ganador.jugador.user.username', read_only=True, allow_null=True)
     class Meta:
         model = Partido
         fields = '__all__'
