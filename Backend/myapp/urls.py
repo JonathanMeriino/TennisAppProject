@@ -13,7 +13,7 @@ router.register(r'usuario',views.UsuarioViewSet)
 router.register(r'torneo', views.TorneoViewSet)
 router.register(r'inscripcion',views.InscripcionViewSet, basename='inscripcion') # Le damos un basename porque no hay un queryset definido en el viewset
 router.register(r'partido', views.PartidoViewSet)
-
+router.register(r'resultados', views.ResultadoViewSet, basename='resultados') # Le damos un basename porque no hay un queryset definido en el viewset
 
 #Incluye todas las rutas generadas por el Router
 urlpatterns = [
