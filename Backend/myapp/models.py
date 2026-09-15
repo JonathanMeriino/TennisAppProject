@@ -41,7 +41,7 @@ class Perfil(models.Model):
     boleta_usuario = models.CharField(max_length=20, unique=True, null=True, blank=True)
     edad_usuario = models.IntegerField(null=True, blank=True)
     sexo_usuario = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], null=True, blank=True)
-    
+    escuela_usuario = models.CharField(max_length=100, null=True, blank=True)
     # Llaves foráneas (Django automáticamente les agregará "_id" en la base de datos)
     rol = models.ForeignKey(Roles, on_delete=models.RESTRICT, null=True, blank=True)
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True, related_name='perfiles')
