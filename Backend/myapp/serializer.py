@@ -30,7 +30,7 @@ class RolesSerializer (serializers.ModelSerializer):
 class PerfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Perfil
-        fields = ['boleta_usuario', 'edad_usuario', 'sexo_usuario', 'rol', 'categoria']
+        fields = ['boleta_usuario', 'edad_usuario', 'sexo_usuario', 'rol','escuela_usuario', 'categoria']
 
 class UserSerializer(serializers.ModelSerializer):
     # Incrustamos el perfil aquí
@@ -38,7 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email','password','escuela_usuario' , 'first_name', 'last_name', 'perfil']
+        fields = ['id', 'username', 'email','password', 'first_name', 'last_name', 'perfil']
         # Añadimos esta linea para que la contraseña sea segura y no viaje de regreso
         extra_kwargs = {
             'password': {'write_only': True},
@@ -85,7 +85,8 @@ class UserSerializer(serializers.ModelSerializer):
                 'edad_usuario': perfil_data.get('edad_usuario'),
                 'sexo_usuario': perfil_data.get('sexo_usuario'),
                 'categoria': perfil_data.get('categoria'),
-                'rol': perfil_data.get('rol', 1)
+                'rol': perfil_data.get('rol', 1),
+                'escuela_usuario': perfil_data.get('escuela_usuario')
             }
         )
         
@@ -111,6 +112,7 @@ class UserSerializer(serializers.ModelSerializer):
                     'edad_usuario': perfil_data.get('edad_usuario', getattr(instance, 'perfil', None) and instance.perfil.edad_usuario),
                     'sexo_usuario': perfil_data.get('sexo_usuario', getattr(instance, 'perfil', None) and instance.perfil.sexo_usuario),
                     'categoria': perfil_data.get('categoria', getattr(instance, 'perfil', None) and instance.perfil.categoria),
+                    'escuela_usuario': perfil_data.get('escuela_usuario', getattr(instance, 'perfil', None) and instance.perfil.escuela_usuario),
                 }
             )
             
