@@ -119,6 +119,7 @@ async function request(url, options = {}) {
   };
 
   const response = await fetch(`http://localhost:8000${url}`, {
+    cache: "no-store",
     ...options,
     headers,
   });
