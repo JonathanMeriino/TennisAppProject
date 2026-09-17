@@ -49,15 +49,17 @@ class UserSerializer(serializers.ModelSerializer):
         # Validar si el email ya existe en la base de datos
         email = data.get('email')
 
-        if self.instance:  # Si estamos actualizando un usuario existente
-            if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
-                raise serializers.ValidationError({"email": "Este correo ya está registrado por otro usuario."})
-            else:  # registro nuevo
+        if email:
+            if self.instance:
+                # Solo lanza el error si pertenece a OTRO usuario diferente al actual
+                if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+                    raise serializers.ValidationError({"email": "Este correo ya está registrado por otro usuario."})
+            else:
                 if User.objects.filter(email=email).exists():
                     raise serializers.ValidationError({"email": "Este correo ya está registrado."})
 
 
-        # Validar si la boleta ya existe en la tabla de Perfil (excluyendo al usuario actual si aplica)
+        # Validar si la boleta ya existe en la tabla de Perfil (excsluyendo al usuario actual si aplica)
         perfil_data = data.get('perfil', {})
         boleta_usuario = perfil_data.get('boleta_usuario')
         if boleta_usuario:
