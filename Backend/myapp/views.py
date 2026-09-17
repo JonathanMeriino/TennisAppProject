@@ -37,6 +37,7 @@ class GetUserViewSet(viewsets.ViewSet):
                 "categoria": categoria_val,
                 "edad_usuario": perfil.edad_usuario if perfil else None,
                 "sexo_usuario": perfil.sexo_usuario if perfil else None,
+                "escuela_usuario": perfil.escuela_usuario if perfil else None
             }
         })
     def put(self, request):
