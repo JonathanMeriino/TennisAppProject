@@ -120,18 +120,68 @@ class TorneoViewSet(viewsets.ModelViewSet):
             
             partidos_por_ronda[r] = creados_en_ronda
 
-        # 3. Sembrar a los jugadores reales en los partidos de la Ronda 1
+        # 3. Sembrar a los jugadores reales y byes asegurando lados opuestos para Seed 1 y Seed 2
         partidos_primera_ronda = partidos_por_ronda[1]
-        idx = 0
-        for part in list(partidos_primera_ronda):
-            if idx < num_jugadores:
-                part.jugador1 = inscripciones[idx]
-                idx += 1
-            if idx < num_jugadores:
-                part.jugador2 = inscripciones[idx]
-                idx += 1
-            part.save()
+        K = len(partidos_primera_ronda)  # Total de partidos en la ronda 1 (ej. 4 partidos)
+        num_byes = potencia_superior - num_jugadores  # Ej. 8 - 6 = 2 byes
 
+        # Limpiamos los partidos de la ronda 1 por seguridad
+        for p in partidos_primera_ronda:
+            p.jugador1 = None
+            p.jugador2 = None
+            p.save()
+
+        # Colocamos al Primer Sembrado en la parte más alta del bracket (Primer partido)
+        if num_byes >= 1 and len(inscripciones) > 0:
+            partidos_primera_ronda[0].jugador1 = inscripciones[0]  # Siembra #1
+            partidos_primera_ronda[0].jugador2 = None  # Bye
+            partidos_primera_ronda[0].save()
+
+        # Colocamos al Segundo Sembrado en la parte más baja del bracket (Último partido)
+        if num_byes >= 2 and len(inscripciones) > 1:
+            partidos_primera_ronda[K - 1].jugador1 = inscripciones[1]  # Siembra #2
+            partidos_primera_ronda[K - 1].jugador2 = None  # Bye
+            partidos_primera_ronda[K - 1].save()
+
+        # Obtenemos los jugadores restantes (del tercer sembrado en adelante)
+        jugadores_restantes = inscripciones[num_byes:]
+
+        # Buscamos los partidos que quedaron libres en el medio del cuadro
+        partidos_disponibles = [
+            p for p in partidos_primera_ronda if p.jugador1 is None and p.jugador2 is None
+        ]
+
+        # Emparejamos a los jugadores restantes en los partidos centrales
+        for p in partidos_disponibles:
+            if len(jugadores_restantes) >= 2:
+                p.jugador1 = jugadores_restantes.pop(0)
+                p.jugador2 = jugadores_restantes.pop()
+            elif len(jugadores_restantes) == 1:
+                p.jugador1 = jugadores_restantes.pop(0)
+                p.jugador2 = None
+            p.save()
+            
+        # 4. Propagación automática de Byes a la siguiente ronda
+        for partido in partidos_por_ronda[1]:
+            # Si un partido tiene un jugador y el otro es None (Bye)
+            if (partido.jugador1 is not None and partido.jugador2 is None) or \
+            (partido.jugador1 is None and partido.jugador2 is not None):
+                
+                # Identificamos cuál es el jugador que pasa (el que no es None)
+                jugador_avanza = partido.jugador1 if partido.jugador1 is not None else partido.jugador2
+                
+                # Marcamos este partido de primera ronda como finalizado o avanzado (opcional, según tu lógica de partidos)
+                partido.estado = 'Finalizado' # O el estado que uses para partidos cerrados/con pase automático
+                partido.save()
+
+                # Empujamos al jugador automáticamente al partido siguiente
+                if partido.partido_siguiente:
+                    sig = partido.partido_siguiente
+                    if sig.jugador1 is None:
+                        sig.jugador1 = jugador_avanza
+                    elif sig.jugador2 is None:
+                        sig.jugador2 = jugador_avanza
+                    sig.save()
         return Response({"status": f"Cuadro de eliminación directa creado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods = ['post'])
@@ -205,7 +255,6 @@ class PartidoViewSet(viewsets.ModelViewSet):
     queryset = Partido.objects.all()
     serializer_class = PartidoSerializer
 
-
 class ResultadoViewSet(viewsets.ModelViewSet):
     queryset = Resultado.objects.all()
     serializer_class = ResultadoSerializer
@@ -218,7 +267,8 @@ class ResultadoViewSet(viewsets.ModelViewSet):
         resultado = serializer.save()
         partido = resultado.partido
         ganador = resultado.ganador
-        
+
+        #Cierra el partido y marca como finalizado
         partido.estado = 'Finalizado'
         partido.save()
         
@@ -230,3 +280,28 @@ class ResultadoViewSet(viewsets.ModelViewSet):
             elif sig_partido.jugador2 is None:
                 sig_partido.jugador2 = ganador
             sig_partido.save()
+
+        es_partido_final = False
+        
+        if not partido.partido_siguiente:
+            es_partido_final = True
+        elif hasattr(partido, 'fase') and partido.fase and 'final' in str(partido.fase).lower():
+            es_partido_final = True
+
+        # Si detectamos que es la final, cerramos el torneo de forma directa
+        if es_partido_final:
+            torneo = getattr(partido, 'torneo', None)
+            
+            # Si el partido no tiene el campo .torneo directo, lo buscamos por relaciones comunes
+            if not torneo and hasattr(partido, 'categoria'):
+                pass # por si acaso
+            
+            if torneo:
+                torneo.estado_torneo = 'Finalizado'
+                torneo.save()
+                print(f"✅ ¡ÉXITO! Torneo '{torneo.nombre_torneo}' actualizado automáticamente a 'Finalizado'.")
+            else:
+                # Búsqueda de emergencia del torneo asociado a este partido
+                from .models import Torneo
+                # Si el partido tiene una llave foránea indirecta, la localizamos:
+                print("⚠️ Advertencia: No se encontró la relación directa .torneo en el objeto partido.")
