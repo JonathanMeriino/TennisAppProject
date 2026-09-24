@@ -43,11 +43,29 @@ class GetUserViewSet(viewsets.ViewSet):
         })
     def put(self, request):
         user = request.user
+        perfil = getattr(user, 'perfil', None)
+
+        # Actualizar los campos del modelo User
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Perfil actualizado correctamente"})
-        return Response(serializer.errors, status=400)
+        else:
+            return Response(serializer.errors, status=400)
+
+        # Actualizar los campos especificos del perfil (edad, escuela) 
+        if perfil:
+            # Obtenemos lso datos enviados desde el request
+            edad = request.data.get('edad_usuario', perfil.edad_usuario)
+            escuela = request.data.get('escuela_usuario', perfil.escuela_usuario)
+
+            if edad is not None and edad != '':
+                perfil.edad_usuario = edad
+            if escuela is not None and escuela != '':
+                perfil.escuela_usuario = escuela
+            perfil.save()
+        
+        return Response({"message": "Perfil actualizado correctamente"})
+        
 
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
