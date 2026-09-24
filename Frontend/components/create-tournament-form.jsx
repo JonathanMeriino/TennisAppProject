@@ -20,7 +20,7 @@ export function CreateTournamentForm() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+ 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,10 +30,9 @@ export function CreateTournamentForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     if (!formData.fecha_inicio) {
-      setError("Por favor selecciona la fecha de inicio del torneo");
+      toast.error("Por favor selecciona la fecha de inicio del torneo");
       return;
     }
 
@@ -55,7 +54,7 @@ export function CreateTournamentForm() {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError(
+      toast.error(
         err.message || "Error al crear el torneo. Por favor asegurate que tienes permisos de administrador para crear torneos.",
       );
     } finally {
@@ -66,11 +65,6 @@ export function CreateTournamentForm() {
   return (
     <div className="card-base">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm border border-destructive/20">
-            ⚠️ {error}
-          </div>
-        )}
 
         {/* Name */}
         <div>
