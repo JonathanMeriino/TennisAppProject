@@ -189,6 +189,25 @@ class TorneoViewSet(viewsets.ModelViewSet):
     def inscribir(self, request, pk=None):
         torneo = self.get_object()
         user = request.user
+        # Validar que el torneo este en estado "Programado"
+        if torneo.estado_torneo != 'Programado':
+            return Response({"detail": "No puedes inscribirte en un torneo que ya ha comenzado o finalizado."}, status=status.HTTP_400_BAD_REQUEST) 
+
+        #validar la restriccion de Rama
+        perfil = getattr(user, 'perfil', None)
+        sexo_usuario = perfil.sexo_usuario if perfil else None
+        rama_torneo = torneo.rama_torneo
+
+        if rama_torneo != 'Mixto' and sexo_usuario:
+            #Normalizar para comparar de forma segura
+            es_masculino = sexo_usuario.lower() in ['masculino', 'hombre', 'm','varonil']
+            es_femenino = sexo_usuario.lower() in ['femenino', 'mujer','femenil', 'f']
+
+            if rama_torneo == 'Varonil' and not es_masculino:
+                return Response({"detail": "Este torneo es solo para jugadores varoniles."}, status=status.HTTP_400_BAD_REQUEST)
+            if rama_torneo == 'Femenil' and not es_femenino:
+                return Response({"detail": "Este torneo es solo para jugadoras femeniles."}, status=status.HTTP_400_BAD_REQUEST)
+
         
         # Extraemos la matriz enviada desde el frontend
         matriz_disponibilidad = request.data.get('matriz_disponibilidad')
