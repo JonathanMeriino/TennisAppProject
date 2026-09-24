@@ -238,7 +238,7 @@ export function RegistroForm() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground block">Escuela / Institución</label>
+            <label className="text-xs font-semibold text-foreground block">Escuela de procedencia</label>
             <input
               type="text"
               name="escuela"
