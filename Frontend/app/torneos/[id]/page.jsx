@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { tournaments as tournamentsApi, auth } from "@/lib/api";
@@ -157,6 +158,19 @@ export default function TournamentDetailPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6 max-w-4xl relative">
+      {/* Enlace para volver al panel */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-4 max-w-7xl flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-primary">Tournify</h1>
+          <Link
+            href="/dashboard"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+          >
+            ← Volver al Panel
+          </Link>
+        </div>
+      </header>
+      
       {/* Tarjeta de Información General */}
       <div className="card-base p-6 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
