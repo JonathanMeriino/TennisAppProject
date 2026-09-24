@@ -35,9 +35,8 @@ export default function TournamentDetailPage() {
   const [isLeaving, setIsLeaving] = useState(false);
   const [matches, setMatches] = useState([]);
   
-  
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  // Determinar si el usuario actual es administrador (según tu estructura de roles/superuser)
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -45,16 +44,34 @@ export default function TournamentDetailPage() {
     Promise.all([
       tournamentsApi.get(id),
       tournamentsApi.participants ? tournamentsApi.participants(id).catch(() => []) : Promise.resolve([]),
-      tournamentsApi.getPartidos(id).catch(() => []),
-      auth.me().catch(() => null)
+      tournamentsApi.getPartidos ? tournamentsApi.getPartidos(id).catch(() => []) : Promise.resolve([]),
+      auth.me ? auth.me().catch(() => null) : Promise.resolve(null)
     ])
       .then(([tournamentData, participantsData, matchesData, userData]) => {
         setTournament(tournamentData);
         setParticipants(Array.isArray(participantsData) ? participantsData : participantsData.results || []);
         setMatches(Array.isArray(matchesData) ? matchesData : matchesData.results || []);
         setCurrentUser(userData);
+        console.log("Datos de usuario recibidos de auth.me():", userData);
+
+        // Validamos si el usuario actual es administrador de forma segura
+        if (userData) {
+          const esSuper = userData.is_superuser === true;
+          // Apuntamos directamente a donde viene el rol en tu JSON de consola:
+          const rolNombre = userData?.perfil?.rol || ""; 
+          const esRolAdmin = typeof rolNombre === 'string' && rolNombre.toLowerCase().includes('administrador');
+          
+          if (esSuper || esRolAdmin) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        }
       })
-      .catch(() => setError("Error al cargar la información del torneo."))
+      .catch((err) => {
+        console.error("Error detallado:", err);
+        toast.error("Error al cargar la información del torneo.");
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -78,6 +95,13 @@ export default function TournamentDetailPage() {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
 
+    //Validacion: Asegurarse de que el torneo esté en estado "Programado"
+    if(tournament?.estado_torneo !== 'Programado') {
+      toast.warning("Las inscripciones para este torneo están cerradas.");
+      return;
+    }
+
+    // Validación: Asegurarse de que al menos un horario esté seleccionado
     if (Object.keys(availability).length === 0) {
       toast.warning("Debes seleccionar al menos un horario de disponibilidad antes de inscribirte.");
       return;
@@ -105,6 +129,14 @@ export default function TournamentDetailPage() {
   };
   
   const handleLeaveTournament = async () => {
+    
+    // Validación: Asegurarse de que el torneo esté en estado "Programado"
+    if (tournament?.estado_torneo !== 'Programado') {
+      toast.error("No puedes darte de baja de un torneo que ya ha comenzado o finalizado.");
+      return;
+    }
+    
+    // Validacion; Confirmación del usuario antes de proceder con la baja
     if (!confirm("¿Estás seguro de que deseas cancelar tu inscripción en este torneo?")) {
       return;
     }
@@ -184,7 +216,8 @@ export default function TournamentDetailPage() {
           </div>
           
           {/* Botón dinámico: Inscribirse o Darse de baja */}
-          {usuarioInscrito ? (
+          {tournament?.estado_torneo === 'Programado' ? (
+          usuarioInscrito ? (
             <button
               onClick={handleLeaveTournament}
               disabled={isLeaving}
@@ -199,7 +232,12 @@ export default function TournamentDetailPage() {
             >
               Inscribirme al Torneo
             </button>
-          )}
+          )
+        ) : (
+          <span className="text-xs px-3 py-1 bg-muted text-muted-foreground rounded-full font-medium">
+            Inscripciones cerradas (Torneo {tournament?.estado_torneo || "en proceso"})
+          </span>
+        )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border text-sm text-muted-foreground">
@@ -250,17 +288,19 @@ export default function TournamentDetailPage() {
           )}
         </div>
 
-        {/* Bracket / Llaves y Botón de Administración */}
+        {/* Bracket / Llaves y Botones de Administración */}
         <div className="card-base p-6 space-y-4">
           <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-bold text-foreground">Bracket / Llaves</h3>
+            <h3 className="text-lg font-bold text-foreground">Botones de administrador</h3>
             <p className="text-sm text-muted-foreground">
-              Asigna los números de siembra a los jugadores para configurar las llaves de eliminación directa.
+              {isAdmin 
+                ? "Asigna los números de siembra a los jugadores para configurar las llaves de eliminación directa."
+                : "Botones visibles solo para administradores del torneo."}
             </p>
             
-            {participants.length > 0 && (
+            {/* Solo se muestran los botones de administración si el usuario es Admin */}
+            {isAdmin && participants.length > 0 && (
               <div className="space-y-2 mt-2">
-               {/* Botón para abrir el modal de siembras */}
                 <button
                   onClick={() => setIsSiembraModalOpen(true)}
                   className="btn-primary text-xs py-2 px-4 w-full text-center"
@@ -268,34 +308,27 @@ export default function TournamentDetailPage() {
                   Ingresar números de siembra
                 </button>
 
-                {/* Botón para disparar el algoritmo en Django */}
                 <button
                   onClick={async () => {
-                    const loadingToast = toast.loading("Generando cuadro de eliminación directa...");
+                    const loadingToast = toast.loading("Generando llaves del torneo...");
                     try {
-                      await tournamentsApi.generateBrackets(id);
+                      await tournamentsApi.generateBracket(id); // O la ruta que maneje tu API para generar el bracket
                       toast.dismiss(loadingToast);
                       toast.success("¡Llaves de enfrentamientos generadas con éxito!");
-                      window.location.reload(); 
+                      window.location.reload();
                     } catch (err) {
                       toast.dismiss(loadingToast);
-                      const errorMsg = err.error || err.detail || "Error al generar las llaves.";
-                      toast.error(errorMsg);
+                      toast.error(err.message || "Error al generar las llaves.");
                     }
                   }}
-                    className="btn-outline text-xs py-2 px-4 w-full text-center"
-                  >
-                    Generar llaves de enfrentamientos
+                  className="btn-outline text-xs py-2 px-4 w-full text-center"
+                >
+                  Generar llaves de enfrentamientos
                 </button>
-
-                
               </div>
             )}
           </div>
 
-          <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm mt-4">
-            Diagrama de llaves pendiente de generación.
-          </div>
         </div>
       </div>
 
