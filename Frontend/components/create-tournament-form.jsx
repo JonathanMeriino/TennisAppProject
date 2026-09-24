@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { tournaments as tournamentsApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export function CreateTournamentForm() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export function CreateTournamentForm() {
       }
     } catch (err) {
       setError(
-        err.message || "Error al crear el torneo. Por favor intenta de nuevo.",
+        err.message || "Error al crear el torneo. Por favor asegurate que tienes permisos de administrador para crear torneos.",
       );
     } finally {
       setIsLoading(false);
