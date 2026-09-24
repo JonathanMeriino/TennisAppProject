@@ -183,6 +183,27 @@ export default function TournamentDetailPage() {
       toast.error("Error al guardar las siembras.");
     }
   };
+  const handleOpenInscribeModal = () => {
+    // Validamos la rama antes de abrir el modal de disponibilidad
+    const sexoUsuario = currentUser?.perfil?.sexo_usuario?.toLowerCase() || "";
+    const ramaTorneo = tournament?.rama || "";
+
+    const esMasculino = sexoUsuario.includes('masculino') || sexoUsuario.includes('varonil') || sexoUsuario === 'm';
+    const esFemenil = sexoUsuario.includes('femenil') || sexoUsuario.includes('femenino') || sexoUsuario === 'f';
+
+    if (ramaTorneo === 'Varonil' && !esMasculino) {
+      toast.error("No cumples con la rama requerida (Torneo Varonil).");
+      return;
+    }
+
+    if (ramaTorneo === 'Femenil' && !esFemenil) {
+      toast.error("No cumples con la rama requerida (Torneo Femenil).");
+      return;
+    }
+
+    // Si pasa la validación, abre el modal normalmente
+    setIsModalOpen(true);
+  };
 
   if (isLoading) {
     return <div className="container mx-auto p-8 text-center text-muted-foreground">Cargando detalles del torneo...</div>;
@@ -227,7 +248,7 @@ export default function TournamentDetailPage() {
             </button>
           ) : (
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenInscribeModal}
               className="btn-primary px-6 py-2 whitespace-nowrap"
             >
               Inscribirme al Torneo
