@@ -220,7 +220,7 @@ export const tournaments = {
       },
     });
   },
-  async generateBrackets(tournamentId) {
+  async generateBracket(tournamentId) {
     return request(`/api/torneo/${tournamentId}/generar_bracket/`, {
       method: "POST",
     });
