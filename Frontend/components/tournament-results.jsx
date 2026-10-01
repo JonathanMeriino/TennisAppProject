@@ -60,7 +60,7 @@ export default function TournamentResults({ matches, tournamentId }) {
 
       {/* SECCIÓN DEL BRACKET / ÁRBOL DEL TORNEO */}
       <h3 className="text-lg font-bold text-foreground">Bracket / Árbol del Torneo</h3>
-      
+
       {matches.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
           Diagrama de llaves pendiente de generación.
@@ -76,10 +76,13 @@ export default function TournamentResults({ matches, tournamentId }) {
                 <h4 className="text-xs font-bold text-center text-primary uppercase tracking-wider bg-primary/10 py-1.5 rounded">
                   {fase}
                 </h4>
-                
+
                 <div className="space-y-4 flex flex-col justify-around h-full">
                   {partidosFase.map((partido) => (
-                    <div key={partido.id || partido.id_partido} className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs">
+                    <div 
+                      key={partido.id || partido.id_partido} 
+                      className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs min-h-[135px] flex flex-col justify-between"
+                    >
                       {/* Jugador 1 */}
                       <div className={`flex justify-between items-center p-1.5 rounded ${partido.username_j1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
                         <span className="font-medium text-foreground">
@@ -97,11 +100,11 @@ export default function TournamentResults({ matches, tournamentId }) {
                       </div>
 
                       {/* Estado y Botón de Registro */}
-                      <div className="pt-2 border-t border-border/50 flex justify-between items-center">
+                      <div className="pt-2 border-t border-border/50 flex justify-between items-center mt-auto">
                         <span className="text-[10px] text-muted-foreground">
                           Estado: <span className="text-foreground">{partido.estado || "Pendiente"}</span>
                         </span>
-                        
+
                         {partido.estado !== "Finalizado" && partido.username_j1 && partido.username_j2 && (
                           <button
                             onClick={() => {
