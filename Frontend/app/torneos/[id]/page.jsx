@@ -40,7 +40,7 @@ export default function TournamentDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-
+    
     Promise.all([
       tournamentsApi.get(id),
       tournamentsApi.participants ? tournamentsApi.participants(id).catch(() => []) : Promise.resolve([]),
@@ -50,10 +50,13 @@ export default function TournamentDetailPage() {
       .then(([tournamentData, participantsData, matchesData, userData]) => {
         setTournament(tournamentData);
         setParticipants(Array.isArray(participantsData) ? participantsData : participantsData.results || []);
-        setMatches(Array.isArray(matchesData) ? matchesData : matchesData.results || []);
+        const rawMatches = Array.isArray(matchesData) ? matchesData : matchesData.results || [];
+        const sortedMatches = rawMatches.sort((a, b) => a.id - b.id);
+        setMatches(sortedMatches);
+        //setMatches(Array.isArray(matchesData) ? matchesData : matchesData.results || []);
         setCurrentUser(userData);
         console.log("Datos de usuario recibidos de auth.me():", userData);
-
+        
         // Validamos si el usuario actual es administrador de forma segura
         if (userData) {
           const esSuper = userData.is_superuser === true;
