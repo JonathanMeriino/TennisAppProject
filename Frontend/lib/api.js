@@ -107,11 +107,11 @@ async function request(path, { method = "GET", body, headers = {}, isForm = fals
 
   return data;
 }*/
-// Ajusta esto en tu archivo donde definiste la función 'request'
+
 async function request(url, options = {}) {
   const token = localStorage.getItem("access_token");
 
-  // Construimos las cabeceras asegurando que el token vaya primero o se fusione correctamente
+  
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { "Authorization": `Bearer ${token}` } : {}),
