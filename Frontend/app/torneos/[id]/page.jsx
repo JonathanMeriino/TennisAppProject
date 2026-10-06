@@ -51,7 +51,7 @@ export default function TournamentDetailPage() {
         setTournament(tournamentData);
         setParticipants(Array.isArray(participantsData) ? participantsData : participantsData.results || []);
         const rawMatches = Array.isArray(matchesData) ? matchesData : matchesData.results || [];
-        const sortedMatches = rawMatches.sort((a, b) => a.id - b.id);
+        const sortedMatches = rawMatches.sort((a, b) => a.id_partido - b.id_partido);
         setMatches(sortedMatches);
         //setMatches(Array.isArray(matchesData) ? matchesData : matchesData.results || []);
         setCurrentUser(userData);
