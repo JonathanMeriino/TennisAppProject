@@ -90,103 +90,120 @@ class TorneoViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='generar_bracket')
     def generar_bracket(self, request, pk=None):
-        """
-        Algoritmo para construir el cuadro de eliminación directa
-        Con distribución simetrica de siembras y byes automáticos. 
-        """
         torneo = self.get_object()
-        
-        # 1. Filtrar solo inscripciones aprobadas y ordenadas por siembra (seed)
-        inscripciones = list(Inscripcion.objects.filter(torneo=torneo).order_by('numero_siembra'))
+    
+        # ENTRADA: Obtención de la lista de participantes 
+        inscripciones = list(torneo.inscripciones.all()) 
         num_jugadores = len(inscripciones)
         
         if num_jugadores < 2:
-            return Response({"error": "Se requieren mínimo 2 jugadores aceptados para estructurar un bracket."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Calcular la potencia de 2 inmediata superior para balancear el cuadro (2, 4, 8, 16, 32...)
+            return Response({"error": "Se requieren mínimo 2 jugadores para generar el cuadro."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # ETAPA 1: Cálculo de la capacidad ideal (Potencias de 2)
         potencia_superior = 2 ** math.ceil(math.log2(num_jugadores))
         total_rondas = int(math.log2(potencia_superior))
         
-        # Limpieza de partidos previos
-        Partido.objects.filter(torneo=torneo).delete()
-
+        # ETAPA 2: Determinación de byes
+        num_byes = potencia_superior - num_jugadores
+        
+        # --- Limpieza previa de llaves antiguas ---
+        torneo.partidos.all().delete()
+        partidos_por_ronda = {}
+        
         def definir_nombre_fase(ronda_actual, rondas_totales):
             if ronda_actual == rondas_totales: return "Final"
             if ronda_actual == rondas_totales - 1: return "Semifinal"
             if ronda_actual == rondas_totales - 2: return "Cuartos de Final"
             return f"Ronda de {2 ** (rondas_totales - ronda_actual + 1)}"
 
-        partidos_por_ronda = {}
-        
-        # 2. Construcción del árbol al revés (de la Final a la Ronda 1) para enlazar 'partido_siguiente'
+        # Creación del árbol de partidos vacíos (De la Final hacia atrás)
         for r in range(total_rondas, 0, -1):
             fase_nombre = definir_nombre_fase(r, total_rondas)
             num_partidos_ronda = potencia_superior // (2 ** r)
             creados_en_ronda = []
-            
             for i in range(num_partidos_ronda):
-                p_siguiente = None
-                # Vincular con el partido de la ronda posterior que ya fue guardado en el diccionario
-                if r < total_rondas:
-                    p_siguiente = partidos_por_ronda[r + 1][i // 2]
-                
-                partido = Partido.objects.create(
-                    torneo=torneo,
-                    fase=fase_nombre,
-                    partido_siguiente=p_siguiente
-                )
+                p_siguiente = partidos_por_ronda[r + 1][i // 2] if r < total_rondas else None
+                partido = Partido.objects.create(torneo=torneo, fase=fase_nombre, partido_siguiente=p_siguiente)
                 creados_en_ronda.append(partido)
-            
             partidos_por_ronda[r] = creados_en_ronda
 
-       # 3. Estructura estándar: Todos los partidos se generan en la Ronda de 16
+        # ETAPA 3: Distribución estricta estilo ATP mediante Slots Planos
         partidos_primera_ronda = partidos_por_ronda[1]
-        num_byes = potencia_superior - num_jugadores  # 16 - 12 = 4 byes
-
-        # Limpiamos todos los partidos por seguridad
-        for ronda in partidos_por_ronda.values():
-            for p in ronda:
-                p.jugador1 = None
-                p.jugador2 = None
-                p.estado = 'Pendiente'
-                p.save()
-
-        # Ordenar jugadores por siembra
-        con_siembra = sorted([ins for ins in inscripciones if ins.numero_siembra is not None], key=lambda x: x.numero_siembra)
-        sin_siembra = [ins for ins in inscripciones if ins.numero_siembra is None]
-        todos_ordenados = con_siembra + sin_siembra
-
-        # Dividimos: 4 jugadores para los Byes y 8 jugadores para los 4 enfrentamientos reales
-        jugadores_con_bye = todos_ordenados[:num_byes]           # 4 jugadores
-        jugadores_en_enfrentamiento = todos_ordenados[num_byes:] # 8 jugadores
-
-        # Creamos los primeros 4 partidos con un jugador real y un Bye (None) en la Ronda de 16
-        for i in range(num_byes):
+        
+        # 3.1 Separar sembrados y no sembrados
+        con_siembra = []
+        sin_siembra = []
+        
+        for ins in inscripciones:
+            try:
+                siembra_val = int(ins.numero_siembra)
+                if siembra_val > 0:
+                    con_siembra.append(ins)
+                else:
+                    sin_siembra.append(ins)
+            except (TypeError, ValueError):
+                # Si el campo viene como None, "", o texto inválido, pasa como "sin siembra"
+                sin_siembra.append(ins)
+                
+        # 3.2 Ordenar los sembrados explícitamente (1, 2, 3...)
+        con_siembra = sorted(con_siembra, key=lambda x: int(x.numero_siembra))
+        
+        # 3.3 Crear un arreglo plano para representar cada espacio físico del cuadro
+        slots = [None] * potencia_superior
+        
+        # 3.4 Anclar a los Sembrados en sus posiciones obligatorias (Extremos ATP)
+        if len(con_siembra) > 0: slots[0] = con_siembra.pop(0)  # Siembra 1 hasta arriba (Slot 0)
+        if len(con_siembra) > 0: slots[-1] = con_siembra.pop(0) # Siembra 2 hasta abajo (Último Slot)
+        if len(con_siembra) > 0 and potencia_superior >= 8: slots[potencia_superior // 2] = con_siembra.pop(0) # Siembra 3 en el medio
+        if len(con_siembra) > 0 and potencia_superior >= 8: slots[(potencia_superior // 2) - 1] = con_siembra.pop(0) # Siembra 4 en el medio
+            
+        # 3.5 Asignar los Byes obligatoriamente como rivales directos de las siembras altas
+        # El rival del slot 0 es el slot 1. El rival del último slot es el penúltimo.
+        posiciones_rivales = [1, potencia_superior - 2]
+        if potencia_superior >= 8:
+            posiciones_rivales.extend([(potencia_superior // 2) + 1, (potencia_superior // 2) - 2])
+        
+        for i in range(potencia_superior):
+            if i not in posiciones_rivales:
+                posiciones_rivales.append(i)
+                
+        # Insertar la etiqueta 'BYE' sin pisar a los jugadores ya anclados
+        byes_colocados = 0
+        for pos in posiciones_rivales:
+            if byes_colocados >= num_byes: break
+            if slots[pos] is None:
+                slots[pos] = 'BYE'
+                byes_colocados += 1
+                
+        # 3.6 Rellenar los espacios vacíos con los jugadores restantes
+        restantes = con_siembra + sin_siembra
+        for i in range(potencia_superior):
+            if slots[i] is None and restantes:
+                slots[i] = restantes.pop(0)
+                
+        # 3.7 Convertir los slots en partidos reales de base de datos (Agrupando de 2 en 2)
+        for i in range(len(partidos_primera_ronda)):
+            jugador_a = slots[i * 2]
+            jugador_b = slots[(i * 2) + 1]
+            
             partido = partidos_primera_ronda[i]
-            partido.jugador1 = jugadores_con_bye[i]
-            partido.jugador2 = None  # Espacio vacío (Bye)
+            partido.jugador1 = jugador_a if jugador_a != 'BYE' else None
+            partido.jugador2 = jugador_b if jugador_b != 'BYE' else None
             partido.save()
-
-        # Creamos los siguientes 4 partidos con los 8 jugadores que sí se enfrentan entre sí
-        indice_partido = num_byes
-        for i in range(0, len(jugadores_en_enfrentamiento), 2):
-            if indice_partido < len(partidos_primera_ronda):
-                partido = partidos_primera_ronda[indice_partido]
-                partido.jugador1 = jugadores_en_enfrentamiento[i]
-                partido.jugador2 = jugadores_en_enfrentamiento[i+1] if i+1 < len(jugadores_en_enfrentamiento) else None
-                partido.save()
-                indice_partido += 1
-
-        # 4. Propagación automática de Byes a la siguiente ronda (Cuartos de Final)
+            
+        # ETAPA 4: Propagación automática a la siguiente ronda 
         for partido in partidos_primera_ronda:
+            # Detectar si es un partido donde alguien juega contra un Bye (Un jugador vs None)
             if (partido.jugador1 is not None and partido.jugador2 is None) or \
-               (partido.jugador1 is None and partido.jugador2 is not None):
+            (partido.jugador1 is None and partido.jugador2 is not None):
                 
                 jugador_avanza = partido.jugador1 if partido.jugador1 is not None else partido.jugador2
                 
+                # Finalizar el partido actual
                 partido.estado = 'Finalizado'
                 partido.save()
 
+                # Enlazar al jugador automáticamente en la siguiente llave
                 if partido.partido_siguiente:
                     sig = partido.partido_siguiente
                     if sig.jugador1 is None:
@@ -194,9 +211,9 @@ class TorneoViewSet(viewsets.ModelViewSet):
                     elif sig.jugador2 is None:
                         sig.jugador2 = jugador_avanza
                     sig.save()
-                    
-        return Response({"status": f"Cuadro de eliminación directa creado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
 
+        return Response({"status": f"Cuadro estructurado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
+    
     @action(detail=True, methods = ['post'])
     def inscribir(self, request, pk=None):
         torneo = self.get_object()
@@ -268,7 +285,7 @@ class TorneoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def partidos(self, request, pk=None):
         torneo = self.get_object()
-        partidos = torneo.partidos.all()  
+        partidos = torneo.partidos.all().order_by('id_partido') 
         serializer = PartidoSerializer(partidos, many=True)
         return Response(serializer.data)
 
