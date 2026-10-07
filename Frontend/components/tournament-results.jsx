@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import { tournaments } from "@/lib/api";
+import TournamentSchedule from '@/components/tournament-schedule'; // Ajusta la ruta según tu proyecto
 
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -240,6 +241,12 @@ export default function TournamentResults({ matches, tournamentId }) {
           </div>
         </div>
       )}
+      
+      
+
+    {/* Agregas el nuevo componente */}
+    <TournamentSchedule matches={matches} />
+      
     </div>
   );
 }
