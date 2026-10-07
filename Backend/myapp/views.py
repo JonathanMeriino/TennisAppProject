@@ -1,4 +1,6 @@
+import json
 import math
+import datetime
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -91,22 +93,16 @@ class TorneoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='generar_bracket')
     def generar_bracket(self, request, pk=None):
         torneo = self.get_object()
-    
-        # ENTRADA: Obtención de la lista de participantes 
-        inscripciones = list(torneo.inscripciones.all()) 
+        inscripciones = list(torneo.inscripciones.all())
         num_jugadores = len(inscripciones)
         
         if num_jugadores < 2:
-            return Response({"error": "Se requieren mínimo 2 jugadores para generar el cuadro."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Se requieren mínimo 2 jugadores."}, status=status.HTTP_400_BAD_REQUEST)
             
-        # ETAPA 1: Cálculo de la capacidad ideal (Potencias de 2)
         potencia_superior = 2 ** math.ceil(math.log2(num_jugadores))
         total_rondas = int(math.log2(potencia_superior))
-        
-        # ETAPA 2: Determinación de byes
         num_byes = potencia_superior - num_jugadores
         
-        # --- Limpieza previa de llaves antiguas ---
         torneo.partidos.all().delete()
         partidos_por_ronda = {}
         
@@ -116,104 +112,205 @@ class TorneoViewSet(viewsets.ModelViewSet):
             if ronda_actual == rondas_totales - 2: return "Cuartos de Final"
             return f"Ronda de {2 ** (rondas_totales - ronda_actual + 1)}"
 
-        # Creación del árbol de partidos vacíos (De la Final hacia atrás)
         for r in range(total_rondas, 0, -1):
             fase_nombre = definir_nombre_fase(r, total_rondas)
-            num_partidos_ronda = potencia_superior // (2 ** r)
             creados_en_ronda = []
-            for i in range(num_partidos_ronda):
+            for i in range(potencia_superior // (2 ** r)):
                 p_siguiente = partidos_por_ronda[r + 1][i // 2] if r < total_rondas else None
                 partido = Partido.objects.create(torneo=torneo, fase=fase_nombre, partido_siguiente=p_siguiente)
                 creados_en_ronda.append(partido)
             partidos_por_ronda[r] = creados_en_ronda
 
-        # ETAPA 3: Distribución estricta estilo ATP mediante Slots Planos
-        partidos_primera_ronda = partidos_por_ronda[1]
-        
-        # 3.1 Separar sembrados y no sembrados
-        con_siembra = []
+        # =========================================================================
+        # ETAPA 3: GENERACIÓN DEL CUADRO (DIVIDE Y VENCERÁS)
+        # =========================================================================
+        sembrados_dict = {}
         sin_siembra = []
         
         for ins in inscripciones:
             try:
-                siembra_val = int(ins.numero_siembra)
-                if siembra_val > 0:
-                    con_siembra.append(ins)
-                else:
-                    sin_siembra.append(ins)
+                num = int(ins.numero_siembra)
+                if num > 0: sembrados_dict[num] = ins
+                else: sin_siembra.append(ins)
             except (TypeError, ValueError):
-                # Si el campo viene como None, "", o texto inválido, pasa como "sin siembra"
                 sin_siembra.append(ins)
-                
-        # 3.2 Ordenar los sembrados explícitamente (1, 2, 3...)
-        con_siembra = sorted(con_siembra, key=lambda x: int(x.numero_siembra))
-        
-        # 3.3 Crear un arreglo plano para representar cada espacio físico del cuadro
+
+        def generar_patron_siembras(n):
+            if n <= 1: return [1]
+            if n == 2: return [1, 2]
+            patron_previo = generar_patron_siembras(n // 2)
+            patron_actual = []
+            for siembra in patron_previo:
+                patron_actual.extend([siembra, n - siembra + 1])
+            return patron_actual
+
+        patron_atp = generar_patron_siembras(potencia_superior)
         slots = [None] * potencia_superior
+        umbral_bye = potencia_superior - num_byes
         
-        # 3.4 Anclar a los Sembrados en sus posiciones obligatorias (Extremos ATP)
-        if len(con_siembra) > 0: slots[0] = con_siembra.pop(0)  # Siembra 1 hasta arriba (Slot 0)
-        if len(con_siembra) > 0: slots[-1] = con_siembra.pop(0) # Siembra 2 hasta abajo (Último Slot)
-        if len(con_siembra) > 0 and potencia_superior >= 8: slots[potencia_superior // 2] = con_siembra.pop(0) # Siembra 3 en el medio
-        if len(con_siembra) > 0 and potencia_superior >= 8: slots[(potencia_superior // 2) - 1] = con_siembra.pop(0) # Siembra 4 en el medio
+        for i, p in enumerate(patron_atp):
+            if p > umbral_bye: slots[i] = 'BYE'
+            elif p in sembrados_dict: slots[i] = sembrados_dict.pop(p)
+                
+        # =========================================================================
+        # ETAPA 4: EMPAREJAMIENTO DE SLOTS (GREEDY BASE)
+        # =========================================================================
+        restantes = list(sembrados_dict.values()) + sin_siembra
+        
+        def get_matriz(jug):
+            if not jug or not jug.matriz_disponibilidad: return {}
+            m = jug.matriz_disponibilidad
+            if isinstance(m, str):
+                try: return json.loads(m)
+                except: return {}
+            return m
+
+        def son_compatibles(jug_1, jug_2):
+            m1, m2 = get_matriz(jug_1), get_matriz(jug_2)
+            if not m1 or not m2: return True
+            dias_comunes = set(m1.keys()).intersection(set(m2.keys()))
+            for dia in dias_comunes:
+                if set(m1[dia]).intersection(set(m2[dia])): return True
+            return False
             
-        # 3.5 Asignar los Byes obligatoriamente como rivales directos de las siembras altas
-        # El rival del slot 0 es el slot 1. El rival del último slot es el penúltimo.
-        posiciones_rivales = [1, potencia_superior - 2]
-        if potencia_superior >= 8:
-            posiciones_rivales.extend([(potencia_superior // 2) + 1, (potencia_superior // 2) - 2])
-        
-        for i in range(potencia_superior):
-            if i not in posiciones_rivales:
-                posiciones_rivales.append(i)
+        partidos_primera_ronda = partidos_por_ronda[1]
+
+        for i in range(potencia_superior // 2):
+            idx_a = i * 2
+            idx_b = (i * 2) + 1
+            
+            if slots[idx_a] is None and slots[idx_b] is None and restantes:
+                jugador_base = restantes.pop(0)
+                slots[idx_a] = jugador_base
+                rival = next((c for c in restantes if son_compatibles(jugador_base, c)), None)
+                if rival: restantes.remove(rival)
+                slots[idx_b] = rival if rival else (restantes.pop(0) if restantes else None)
                 
-        # Insertar la etiqueta 'BYE' sin pisar a los jugadores ya anclados
-        byes_colocados = 0
-        for pos in posiciones_rivales:
-            if byes_colocados >= num_byes: break
-            if slots[pos] is None:
-                slots[pos] = 'BYE'
-                byes_colocados += 1
+            elif slots[idx_a] is not None and slots[idx_a] != 'BYE' and slots[idx_b] is None and restantes:
+                rival = next((c for c in restantes if son_compatibles(slots[idx_a], c)), None)
+                if rival: restantes.remove(rival)
+                slots[idx_b] = rival if rival else (restantes.pop(0) if restantes else None)
                 
-        # 3.6 Rellenar los espacios vacíos con los jugadores restantes
-        restantes = con_siembra + sin_siembra
-        for i in range(potencia_superior):
-            if slots[i] is None and restantes:
-                slots[i] = restantes.pop(0)
-                
-        # 3.7 Convertir los slots en partidos reales de base de datos (Agrupando de 2 en 2)
+            elif slots[idx_b] is not None and slots[idx_b] != 'BYE' and slots[idx_a] is None and restantes:
+                rival = next((c for c in restantes if son_compatibles(slots[idx_b], c)), None)
+                if rival: restantes.remove(rival)
+                slots[idx_a] = rival if rival else (restantes.pop(0) if restantes else None)
+
         for i in range(len(partidos_primera_ronda)):
-            jugador_a = slots[i * 2]
-            jugador_b = slots[(i * 2) + 1]
-            
             partido = partidos_primera_ronda[i]
-            partido.jugador1 = jugador_a if jugador_a != 'BYE' else None
-            partido.jugador2 = jugador_b if jugador_b != 'BYE' else None
+            partido.jugador1 = slots[i * 2] if slots[i * 2] != 'BYE' else None
+            partido.jugador2 = slots[(i * 2) + 1] if slots[(i * 2) + 1] != 'BYE' else None
             partido.save()
-            
-        # ETAPA 4: Propagación automática a la siguiente ronda 
-        for partido in partidos_primera_ronda:
-            # Detectar si es un partido donde alguien juega contra un Bye (Un jugador vs None)
-            if (partido.jugador1 is not None and partido.jugador2 is None) or \
-            (partido.jugador1 is None and partido.jugador2 is not None):
+
+        # =========================================================================
+        # ETAPA 5: PLANIFICADOR GLOBAL (HORARIOS, CANCHAS Y DESCANSOS)
+        # =========================================================================
+        canchas_disponibles = getattr(torneo, 'canchas_disponibles', 2) # Máximo 2 partidos
+        horarios_bloque = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]
+        
+        canchas_uso = {} # { fecha: { "08:00": 1, ... } }
+        jugador_uso = {} # { username: set(fechas) }
+        fecha_minima_por_partido = {} # Para respetar la cronología de rondas
+        hoy = datetime.date.today()
+
+        def normalizar_dia(dia):
+            return dia.replace('é','e').replace('á','a').replace('í','i').replace('ó','o').replace('ú','u').lower()
+
+        for r in range(1, total_rondas + 1):
+            for partido in partidos_por_ronda[r]:
+                # Refrescar desde BD para traer jugadores propagados de rondas anteriores
+                partido.refresh_from_db()
                 
-                jugador_avanza = partido.jugador1 if partido.jugador1 is not None else partido.jugador2
+                # --- MANEJO DE BYES ---
+                if (partido.jugador1 is not None and partido.jugador2 is None) or \
+                (partido.jugador1 is None and partido.jugador2 is not None):
+                    
+                    jugador_avanza = partido.jugador1 if partido.jugador1 else partido.jugador2
+                    partido.estado = 'Finalizado'
+                    partido.save()
+                    
+                    if partido.partido_siguiente:
+                        sig = partido.partido_siguiente
+                        if sig.jugador1 is None: sig.jugador1 = jugador_avanza
+                        elif sig.jugador2 is None: sig.jugador2 = jugador_avanza
+                        sig.save()
+                        
+                        # Herencia cronológica (no toma tiempo)
+                        f_min = fecha_minima_por_partido.get(partido.id_partido, hoy + datetime.timedelta(days=1))
+                        curr_min = fecha_minima_por_partido.get(sig.id_partido, hoy)
+                        fecha_minima_por_partido[sig.id_partido] = max(curr_min, f_min)
+                    continue
+                    
+                # --- MANEJO DE PARTIDOS REALES ---
+                jug1, jug2 = partido.jugador1, partido.jugador2
+                fecha_min = fecha_minima_por_partido.get(partido.id_partido, hoy + datetime.timedelta(days=1))
+                agendado = False
+                fecha_agendada = None
+                hora_agendada = None
                 
-                # Finalizar el partido actual
-                partido.estado = 'Finalizado'
+                def is_slot_available(f, h):
+                    if canchas_uso.get(f, {}).get(h, 0) >= canchas_disponibles: return False
+                    # Cruzamos la llave foránea 'jugador' para acceder al username
+                    if jug1 and f in jugador_uso.get(jug1.jugador.username, set()): return False
+                    if jug2 and f in jugador_uso.get(jug2.jugador.username, set()): return False
+                    return True
+                
+                def book_slot(f, h):
+                    if f not in canchas_uso: canchas_uso[f] = {b: 0 for b in horarios_bloque}
+                    canchas_uso[f][h] += 1
+                    # Cruzamos la llave foránea 'jugador' para registrar el uso
+                    if jug1: jugador_uso.setdefault(jug1.jugador.username, set()).add(f)
+                    if jug2: jugador_uso.setdefault(jug2.jugador.username, set()).add(f)
+
+                # Intento 1: Compatibilidad de Matriz (Solo si conocemos a ambos jugadores)
+                if jug1 and jug2:
+                    m1, m2 = get_matriz(jug1), get_matriz(jug2)
+                    dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado", 6: "Domingo"}
+                    
+                    for offset in range(14): # Buscar en las próximas 2 semanas
+                        eval_date = fecha_min + datetime.timedelta(days=offset)
+                        dia_str = normalizar_dia(dias_semana[eval_date.weekday()])
+                        
+                        d1 = [k for k in m1.keys() if normalizar_dia(k) == dia_str]
+                        d2 = [k for k in m2.keys() if normalizar_dia(k) == dia_str]
+                        
+                        if d1 and d2:
+                            comunes = set(m1[d1[0]]).intersection(set(m2[d2[0]]))
+                            for hora_raw in comunes:
+                                hora_limpia = hora_raw.split("-")[0].strip() if "-" in hora_raw else hora_raw.strip()
+                                if hora_limpia in horarios_bloque and is_slot_available(eval_date, hora_limpia):
+                                    book_slot(eval_date, hora_limpia)
+                                    fecha_agendada, hora_agendada = eval_date, hora_limpia
+                                    agendado = True
+                                    break
+                        if agendado: break
+
+                # Intento 2: Fallback al Fin de Semana o Siguiente Día Hábil (Obligatorio)
+                if not agendado:
+                    eval_date = fecha_min
+                    while not agendado:
+                        # Busca el Sábado (5) o Domingo (6)
+                        if eval_date.weekday() in [5, 6]: 
+                            for hora in horarios_bloque:
+                                if is_slot_available(eval_date, hora):
+                                    book_slot(eval_date, hora)
+                                    fecha_agendada, hora_agendada = eval_date, hora
+                                    agendado = True
+                                    break
+                        eval_date += datetime.timedelta(days=1)
+                        
+                # Guardado y propagación de cronología
+                partido.fecha = fecha_agendada.strftime('%Y-%m-%d')
+                partido.hora = hora_agendada
                 partido.save()
-
-                # Enlazar al jugador automáticamente en la siguiente llave
+                
                 if partido.partido_siguiente:
-                    sig = partido.partido_siguiente
-                    if sig.jugador1 is None:
-                        sig.jugador1 = jugador_avanza
-                    elif sig.jugador2 is None:
-                        sig.jugador2 = jugador_avanza
-                    sig.save()
+                    curr_min = fecha_minima_por_partido.get(partido.partido_siguiente.id_partido, hoy)
+                    # El partido siguiente debe jugarse al menos un día después de este
+                    fecha_minima_por_partido[partido.partido_siguiente.id_partido] = max(curr_min, fecha_agendada + datetime.timedelta(days=1))
 
-        return Response({"status": f"Cuadro estructurado con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
-    
+        return Response({"status": f"Cuadro y agendas estructuradas con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
+        
     @action(detail=True, methods = ['post'])
     def inscribir(self, request, pk=None):
         torneo = self.get_object()
