@@ -1,183 +1,72 @@
-"use client";
+import React from 'react';
 
-import { useState, useEffect } from "react";
-import { tournaments as tournamentsApi } from "@/lib/api";
-
-export function TournamentSchedule({ tournamentId, isOrganizer }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [matches, setMatches] = useState([]);
-  const [viewMode, setViewMode] = useState("by-date");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!tournamentId) return;
-    tournamentsApi
-      .matches(tournamentId)
-      .then((data) => setMatches(Array.isArray(data) ? data : []))
-      .catch((err) => setError(err.message))
-      .finally(() => setIsLoading(false));
-  }, [tournamentId]);
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Completado":
-        return "bg-primary/20 text-primary";
-      case "Pendiente":
-        return "bg-accent/20 text-accent-foreground";
-      case "Cancelado":
-        return "bg-destructive/20 text-destructive";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
-  const matchesByDate = matches.reduce((acc, match) => {
-    if (!acc[match.date]) acc[match.date] = [];
-    acc[match.date].push(match);
-    return acc;
-  }, {});
-
-  const matchesByGroup = matches.reduce((acc, match) => {
-    if (!acc[match.group]) acc[match.group] = [];
-    acc[match.group].push(match);
-    return acc;
-  }, {});
-
-  if (isLoading) {
+export default function TournamentSchedule({ matches }) {
+  // Validamos que existan partidos para no romper la vista
+  if (!matches || matches.length === 0) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        Cargando calendario...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="py-12 text-center text-destructive">{error}</div>
-    );
-  }
-
-  if (matches.length === 0) {
-    return (
-      <div className="py-12 text-center text-muted-foreground">
-        No hay partidos programados
+      <div className="mt-12 w-full p-6 text-center border rounded-lg bg-card text-muted-foreground">
+        Aún no hay partidos generados para mostrar en la agenda.
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setViewMode("by-date")}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            viewMode === "by-date"
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-border"
-          }`}
-        >
-          Por Fecha
-        </button>
-        <button
-          onClick={() => setViewMode("by-group")}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            viewMode === "by-group"
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-border"
-          }`}
-        >
-          Por Grupo
-        </button>
-      </div>
+    <div className="mt-12 w-full">
+      <h3 className="text-lg font-bold text-foreground border-b border-border/50 pb-2 mb-6">
+        🗓️ Programación y Horarios de Partidos
+      </h3>
 
-      <div className="space-y-6">
-        {viewMode === "by-date"
-          ? Object.keys(matchesByDate).map((date) => (
-              <div key={date} className="card-base">
-                <h3 className="text-lg font-bold text-foreground mb-4">
-                  {date}
-                </h3>
-                <div className="space-y-4">
-                  {matchesByDate[date].map((match) => (
-                    <div
-                      key={match.id}
-                      className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                        <div>
-                          <span className="text-xs px-2 py-1 bg-muted text-muted-foreground rounded">
-                            {match.group}
-                          </span>
-                          <h4 className="font-medium text-foreground mt-2">
-                            {match.player1} vs {match.player2}
-                          </h4>
-                        </div>
-                        <span
-                          className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusBadge(match.status)}`}
-                        >
-                          {match.status}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-muted-foreground mb-3">
-                        <div>⏰ {match.time}</div>
-                        <div>📍 {match.court}</div>
-                        {match.result && (
-                          <div className="font-medium text-primary">
-                            Resultado: {match.result}
-                          </div>
-                        )}
-                      </div>
-                      {isOrganizer && match.status === "Pendiente" && (
-                        <button className="text-sm text-primary font-medium hover:underline">
-                          Reportar Resultado
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          : Object.keys(matchesByGroup).map((group) => (
-              <div key={group} className="card-base">
-                <h3 className="text-lg font-bold text-foreground mb-4">
-                  {group}
-                </h3>
-                <div className="space-y-4">
-                  {matchesByGroup[group].map((match) => (
-                    <div
-                      key={match.id}
-                      className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                        <h4 className="font-medium text-foreground">
-                          {match.player1} vs {match.player2}
-                        </h4>
-                        <span
-                          className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusBadge(match.status)}`}
-                        >
-                          {match.status}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-muted-foreground mb-3">
-                        <div>📅 {match.date}</div>
-                        <div>⏰ {match.time}</div>
-                        <div>📍 {match.court}</div>
-                      </div>
-                      {match.result && (
-                        <div className="text-sm font-medium text-primary mb-3">
-                          Resultado: {match.result}
-                        </div>
-                      )}
-                      {isOrganizer && match.status === "Pendiente" && (
-                        <button className="text-sm text-primary font-medium hover:underline">
-                          Reportar Resultado
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+      <div className="overflow-hidden border border-border rounded-lg shadow-sm bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left whitespace-nowrap">
+            <thead className="bg-primary/5 text-muted-foreground uppercase text-[11px] font-bold tracking-wider">
+              <tr>
+                <th className="px-5 py-4 border-b border-border">Fase</th>
+                <th className="px-5 py-4 border-b border-border">Enfrentamiento</th>
+                <th className="px-5 py-4 border-b border-border">Fecha</th>
+                <th className="px-5 py-4 border-b border-border">Hora</th>
+                <th className="px-5 py-4 border-b border-border">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {matches
+                .filter((m) => !(m.estado === "Finalizado" && (!m.username_j1 || !m.username_j2)))
+                .map((partido) => (
+                  <tr key={partido.id_partido} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-4 font-medium text-primary">
+                      {partido.fase}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`font-semibold ${!partido.username_j1 ? "text-muted-foreground italic" : "text-foreground"}`}>
+                        {partido.username_j1 || "Por definir"}
+                      </span>
+                      <span className="mx-3 text-[10px] bg-secondary px-2 py-0.5 rounded text-secondary-foreground font-bold">
+                        VS
+                      </span>
+                      <span className={`font-semibold ${!partido.username_j2 ? "text-muted-foreground italic" : "text-foreground"}`}>
+                        {partido.username_j2 || "Por definir"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground">
+                      {partido.fecha ? `📅 ${partido.fecha}` : <span className="italic opacity-60">Por asignar</span>}
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground">
+                      {partido.hora ? `⏰ ${partido.hora}` : <span className="italic opacity-60">Por asignar</span>}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                        partido.estado === 'Finalizado' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {partido.estado || "Pendiente"}
+                      </span>
+                    </td>
+                  </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
