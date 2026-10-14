@@ -166,7 +166,11 @@ class InscripcionesSerializer(serializers.ModelSerializer):
 #Serializer Partido
 class PartidoSerializer(serializers.ModelSerializer):
     username_j1 = serializers.CharField(source='jugador1.jugador.username', read_only=True)
+    siembra_j1 = serializers.IntegerField(source='jugador1.numero_siembra', read_only=True)
+
     username_j2 = serializers.CharField(source='jugador2.jugador.username', read_only=True)
+    siembra_j2 = serializers.IntegerField(source='jugador2.numero_siembra', read_only=True)
+    
     username_ganador = serializers.CharField(source='ganador.jugador.user.username', read_only=True, allow_null=True)
     class Meta:
         model = Partido
