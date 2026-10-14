@@ -7,7 +7,19 @@ import TournamentSchedule from '@/components/tournament-schedule'; // Ajusta la 
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const fasesDisponibles = Array.from(new Set(matches.map(m => m.fase)));
+  
+  const ordenFases = {
+    "Ronda de 64": 1,
+    "Ronda de 32": 2,
+    "Ronda de 16": 3,
+    "Cuartos de Final": 4,
+    "Semifinal": 5,
+    "Final": 6
+  };
 
+  // Ordenamos el arreglo extraído
+  const fasesOrdenadas = fasesDisponibles.sort((a, b) => (ordenFases[a] || 0) - (ordenFases[b] || 0));
   // Lógica para detectar al Campeón una vez concluida la Final
   // Lógica flexible para detectar al Campeón
   const partidoFinal = matches.find((m) => m.fase?.toLowerCase() === "final");
@@ -68,7 +80,7 @@ export default function TournamentResults({ matches, tournamentId }) {
         </div>
       ) : (
         <div className="flex overflow-x-auto gap-8 py-4">
-          {["Ronda de 16", "Cuartos de Final", "Semifinal", "Final"].map((fase) => {
+          {fasesOrdenadas.map((fase) => {
             const partidosFase = matches.filter((m) => m.fase === fase);
             if (partidosFase.length === 0) return null;
 
@@ -85,18 +97,40 @@ export default function TournamentResults({ matches, tournamentId }) {
                       className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs min-h-[135px] flex flex-col justify-between"
                     >
                       {/* Jugador 1 */}
-                      <div className={`flex justify-between items-center p-1.5 rounded ${partido.username_j1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
+                      <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
                         <span className="font-medium text-foreground">
-                          {partido.username_j1 || "Bye / Por definir"}
+                          {partido.username_j1 ? (
+                            <>
+                              {partido.siembra_j1 && (
+                                <span className="text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded mr-2">
+                                  [{partido.siembra_j1}]
+                                </span>
+                              )}
+                              {partido.username_j1}
+                            </>
+                          ) : (
+                            "Bye / Por definir"
+                          )}
                         </span>
                       </div>
 
                       <div className="border-t border-border/50"></div>
 
-                      {/* Jugador 2 */}
-                      <div className={`flex justify-between items-center p-1.5 rounded ${partido.username_j2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
+                      {/* Participante 2 */}
+                      <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
                         <span className="font-medium text-foreground">
-                          {partido.username_j2 || "Bye / Por definir"}
+                          {partido.username_j2 ? (
+                            <>
+                              {partido.siembra_j2 && (
+                                <span className="text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded mr-2">
+                                  [{partido.siembra_j2}]
+                                </span>
+                              )}
+                              {partido.username_j2}
+                            </>
+                          ) : (
+                            "Bye / Por definir"
+                          )}
                         </span>
                       </div>
 
