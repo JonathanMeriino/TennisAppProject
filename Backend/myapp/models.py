@@ -3,9 +3,6 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-# ==========================================
-# 1. TABLAS DE CATÁLOGOS E INDEPENDIENTES
-# ==========================================
 
 class Roles(models.Model):
     id_rol = models.AutoField(primary_key=True)
@@ -29,10 +26,7 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nombre_categoria
 
-# ==========================================
 # 2. PERFIL DEL USUARIO
-# ==========================================
-
 class Perfil(models.Model):
     # Relación OneToOne con la tabla nativa User de Django (para correo y password)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
@@ -100,7 +94,7 @@ class Inscripcion(models.Model):
     # Campos estratégicos para la Eliminación Directa
     numero_siembra = models.PositiveIntegerField(null=True, blank=True)
     matriz_disponibilidad = models.JSONField(null=True, blank=True) 
-    #estado_inscripcion = models.CharField(max_length=50, default='Pendiente')
+    
     fecha_inscripcion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
