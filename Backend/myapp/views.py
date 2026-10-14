@@ -218,12 +218,13 @@ class TorneoViewSet(viewsets.ModelViewSet):
 
         for r in range(1, total_rondas + 1):
             for partido in partidos_por_ronda[r]:
-                # Refrescar desde BD para traer jugadores propagados de rondas anteriores
                 partido.refresh_from_db()
                 
-                # --- MANEJO DE BYES ---
-                if (partido.jugador1 is not None and partido.jugador2 is None) or \
-                (partido.jugador1 is None and partido.jugador2 is not None):
+                # --- MANEJO DE BYES (SOLO EN LA PRIMERA RONDA) ---
+                if r == 1 and (
+                    (partido.jugador1 is not None and partido.jugador2 is None) or 
+                    (partido.jugador1 is None and partido.jugador2 is not None)
+                ):
                     
                     jugador_avanza = partido.jugador1 if partido.jugador1 else partido.jugador2
                     partido.estado = 'Finalizado'
