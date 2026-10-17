@@ -12,7 +12,109 @@ from .models import (
 )
 from .permissions import IsAdminUserCustom
 
-# Create your views here.
+# =========================================================================
+# FUNCIÓN GLOBAL: PROGRAMACIÓN DINÁMICA (JUST-IN-TIME)
+# =========================================================================
+def asignar_horario_dinamico(partido):
+    """
+    Cruza las disponibilidades de dos jugadores y busca espacio en la base de datos.
+    Solo se ejecuta si el partido ya tiene a ambos contendientes definidos.
+    Asegura que el partido se programe DESPUÉS de las fechas en que los jugadores
+    ganaron sus llaves previas.
+    """
+    if not partido.jugador1 or not partido.jugador2:
+        return False
+
+    torneo = partido.torneo
+    canchas_disponibles = getattr(torneo, 'canchas_disponibles', 2)
+    horarios_bloque = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]
+    dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado", 6: "Domingo"}
+
+    def normalizar_dia(dia):
+        return dia.replace('é','e').replace('á','a').replace('í','i').replace('ó','o').replace('ú','u').lower()
+
+    def get_matriz(jug):
+        m = jug.matriz_disponibilidad
+        if isinstance(m, str):
+            try: return json.loads(m)
+            except: return {}
+        return m or {}
+
+    m1 = get_matriz(partido.jugador1)
+    m2 = get_matriz(partido.jugador2)
+
+    # 1. --- CÁLCULO DE LA FECHA BASE (EVITAR VIAJES EN EL TIEMPO) ---
+    hoy = datetime.date.today()
+    fecha_minima_calculada = hoy
+    
+    # Buscar qué partidos ganaron el jugador 1 y el jugador 2 para llegar aquí
+    partidos_previos = Partido.objects.filter(
+        partido_siguiente=partido, 
+        estado='Finalizado'
+    )
+    
+    for previo in partidos_previos:
+        if previo.fecha:
+            # Convertir el string YYYY-MM-DD a objeto Date
+            fecha_previo = previo.fecha
+            # Asegurarse de que ambos sean objetos date antes de comparar
+            if isinstance(fecha_previo, str):
+                # Por si acaso la base de datos sí devolvió un string
+                fecha_previo = datetime.datetime.strptime(fecha_previo, '%Y-%m-%d').date()
+                
+            if fecha_previo >= fecha_minima_calculada:
+                # La nueva fecha mínima debe ser estrictamente un día después del último partido jugado
+                fecha_minima_calculada = fecha_previo + datetime.timedelta(days=1)
+                
+    # Si por alguna razón la fecha calculada es en el pasado, usamos mañana
+    if fecha_minima_calculada <= hoy:
+        fecha_minima_calculada = hoy + datetime.timedelta(days=1)
+
+    agendado = False
+
+    # 2. --- Intento 1: Intersección Matemática Voraz ---
+    for offset in range(14): # Buscar en los próximos 14 días a partir de la fecha base
+        eval_date = fecha_minima_calculada + datetime.timedelta(days=offset)
+        dia_str = normalizar_dia(dias_semana[eval_date.weekday()])
+        
+        d1 = [k for k in m1.keys() if normalizar_dia(k) == dia_str]
+        d2 = [k for k in m2.keys() if normalizar_dia(k) == dia_str]
+        
+        if d1 and d2:
+            comunes = set(m1[d1[0]]).intersection(set(m2[d2[0]]))
+            for hora_raw in comunes:
+                hora_limpia = hora_raw.split("-")[0].strip() if "-" in hora_raw else hora_raw.strip()
+                if hora_limpia in horarios_bloque:
+                    # Validar directamente en Base de Datos si hay canchas libres
+                    ocupadas = Partido.objects.filter(torneo=torneo, fecha=eval_date, hora=hora_limpia).count()
+                    if ocupadas < canchas_disponibles:
+                        partido.fecha = eval_date.strftime('%Y-%m-%d')
+                        partido.hora = hora_limpia
+                        partido.estado = 'Programado'
+                        partido.save()
+                        return True
+
+    # 3. --- Intento 2: Fallback (Fin de semana) si no tienen agendas compatibles ---
+    if not agendado:
+        eval_date = fecha_minima_calculada
+        while (eval_date - fecha_minima_calculada).days < 21: # Buscar hasta 3 semanas adelante
+            if eval_date.weekday() in [5, 6]: # 5=Sábado, 6=Domingo
+                for hora in horarios_bloque:
+                    ocupadas = Partido.objects.filter(torneo=torneo, fecha=eval_date, hora=hora).count()
+                    if ocupadas < canchas_disponibles:
+                        partido.fecha = eval_date.strftime('%Y-%m-%d')
+                        partido.hora = hora
+                        partido.estado = 'Programado'
+                        partido.save()
+                        return True
+            eval_date += datetime.timedelta(days=1)
+            
+    return False
+
+# =========================================================================
+# CONTROLADORES DE LA API (VIEWS)
+# =========================================================================
+
 class GetUserViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -20,13 +122,9 @@ class GetUserViewSet(viewsets.ViewSet):
         user = request.user
         perfil = getattr(user, 'perfil', None)
 
-        #Obtenermos el valor de la categoria
-
         categoria_val = None
         if perfil and perfil.categoria:
             categoria_val = getattr(perfil.categoria, 'nombre_categoria', str(perfil.categoria))
-
-
 
         return Response({
             "username": user.username,
@@ -43,20 +141,18 @@ class GetUserViewSet(viewsets.ViewSet):
                 "rol": perfil.rol.nombre_rol if perfil and perfil.rol else None
             }
         })
+        
     def put(self, request):
         user = request.user
         perfil = getattr(user, 'perfil', None)
 
-        # Actualizar los campos del modelo User
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
         else:
             return Response(serializer.errors, status=400)
 
-        # Actualizar los campos especificos del perfil (edad, escuela) 
         if perfil:
-            # Obtenemos lso datos enviados desde el request
             edad = request.data.get('edad_usuario', perfil.edad_usuario)
             escuela = request.data.get('escuela_usuario', perfil.escuela_usuario)
 
@@ -68,12 +164,10 @@ class GetUserViewSet(viewsets.ViewSet):
         
         return Response({"message": "Perfil actualizado correctamente"})
         
-
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
     serializer_class = RolesSerializer
     
-
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -82,8 +176,6 @@ class TorneoViewSet(viewsets.ModelViewSet):
     queryset = Torneo.objects.all()
     serializer_class = TorneoSerializer
     def get_permissions(self):
-        # Permitir que cualquier usuario autenticado vea (GET), 
-        # pero exigir que sea Administrador para crear, actualizar o borrar (POST, PUT, DELETE)
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsAdminUser]
         else:
@@ -203,19 +295,8 @@ class TorneoViewSet(viewsets.ModelViewSet):
             partido.save()
 
         # =========================================================================
-        # ETAPA 5: PLANIFICADOR GLOBAL (HORARIOS, CANCHAS Y DESCANSOS)
+        # ETAPA 5: PLANIFICADOR GLOBAL LIMPIO (MODO JUST-IN-TIME)
         # =========================================================================
-        canchas_disponibles = getattr(torneo, 'canchas_disponibles', 2) # Máximo 2 partidos
-        horarios_bloque = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]
-        
-        canchas_uso = {} # { fecha: { "08:00": 1, ... } }
-        jugador_uso = {} # { username: set(fechas) }
-        fecha_minima_por_partido = {} # Para respetar la cronología de rondas
-        hoy = datetime.date.today()
-
-        def normalizar_dia(dia):
-            return dia.replace('é','e').replace('á','a').replace('í','i').replace('ó','o').replace('ú','u').lower()
-
         for r in range(1, total_rondas + 1):
             for partido in partidos_por_ronda[r]:
                 partido.refresh_from_db()
@@ -225,7 +306,6 @@ class TorneoViewSet(viewsets.ModelViewSet):
                     (partido.jugador1 is not None and partido.jugador2 is None) or 
                     (partido.jugador1 is None and partido.jugador2 is not None)
                 ):
-                    
                     jugador_avanza = partido.jugador1 if partido.jugador1 else partido.jugador2
                     partido.estado = 'Finalizado'
                     partido.save()
@@ -235,98 +315,31 @@ class TorneoViewSet(viewsets.ModelViewSet):
                         if sig.jugador1 is None: sig.jugador1 = jugador_avanza
                         elif sig.jugador2 is None: sig.jugador2 = jugador_avanza
                         sig.save()
-                        
-                        # Herencia cronológica (no toma tiempo)
-                        f_min = fecha_minima_por_partido.get(partido.id_partido, hoy + datetime.timedelta(days=1))
-                        curr_min = fecha_minima_por_partido.get(sig.id_partido, hoy)
-                        fecha_minima_por_partido[sig.id_partido] = max(curr_min, f_min)
                     continue
                     
-                # --- MANEJO DE PARTIDOS REALES ---
-                jug1, jug2 = partido.jugador1, partido.jugador2
-                fecha_min = fecha_minima_por_partido.get(partido.id_partido, hoy + datetime.timedelta(days=1))
-                agendado = False
-                fecha_agendada = None
-                hora_agendada = None
-                
-                def is_slot_available(f, h):
-                    if canchas_uso.get(f, {}).get(h, 0) >= canchas_disponibles: return False
-                    # Cruzamos la llave foránea 'jugador' para acceder al username
-                    if jug1 and f in jugador_uso.get(jug1.jugador.username, set()): return False
-                    if jug2 and f in jugador_uso.get(jug2.jugador.username, set()): return False
-                    return True
-                
-                def book_slot(f, h):
-                    if f not in canchas_uso: canchas_uso[f] = {b: 0 for b in horarios_bloque}
-                    canchas_uso[f][h] += 1
-                    # Cruzamos la llave foránea 'jugador' para registrar el uso
-                    if jug1: jugador_uso.setdefault(jug1.jugador.username, set()).add(f)
-                    if jug2: jugador_uso.setdefault(jug2.jugador.username, set()).add(f)
+                # --- PROGRAMACIÓN DINÁMICA ---
+                # Si el partido ya tiene ambos jugadores, los agendamos.
+                # Si falta alguien, se salta la programación para evitar fechas basura.
+                if partido.jugador1 and partido.jugador2 and partido.estado != 'Finalizado':
+                    asignar_horario_dinamico(partido)
 
-                # Intento 1: Compatibilidad de Matriz (Solo si conocemos a ambos jugadores)
-                if jug1 and jug2:
-                    m1, m2 = get_matriz(jug1), get_matriz(jug2)
-                    dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado", 6: "Domingo"}
-                    
-                    for offset in range(14): # Buscar en las próximas 2 semanas
-                        eval_date = fecha_min + datetime.timedelta(days=offset)
-                        dia_str = normalizar_dia(dias_semana[eval_date.weekday()])
-                        
-                        d1 = [k for k in m1.keys() if normalizar_dia(k) == dia_str]
-                        d2 = [k for k in m2.keys() if normalizar_dia(k) == dia_str]
-                        
-                        if d1 and d2:
-                            comunes = set(m1[d1[0]]).intersection(set(m2[d2[0]]))
-                            for hora_raw in comunes:
-                                hora_limpia = hora_raw.split("-")[0].strip() if "-" in hora_raw else hora_raw.strip()
-                                if hora_limpia in horarios_bloque and is_slot_available(eval_date, hora_limpia):
-                                    book_slot(eval_date, hora_limpia)
-                                    fecha_agendada, hora_agendada = eval_date, hora_limpia
-                                    agendado = True
-                                    break
-                        if agendado: break
+        torneo.estado_torneo = 'En Curso'
+        torneo.save()
 
-                # Intento 2: Fallback al Fin de Semana o Siguiente Día Hábil (Obligatorio)
-                if not agendado:
-                    eval_date = fecha_min
-                    while not agendado:
-                        # Busca el Sábado (5) o Domingo (6)
-                        if eval_date.weekday() in [5, 6]: 
-                            for hora in horarios_bloque:
-                                if is_slot_available(eval_date, hora):
-                                    book_slot(eval_date, hora)
-                                    fecha_agendada, hora_agendada = eval_date, hora
-                                    agendado = True
-                                    break
-                        eval_date += datetime.timedelta(days=1)
-                        
-                # Guardado y propagación de cronología
-                partido.fecha = fecha_agendada.strftime('%Y-%m-%d')
-                partido.hora = hora_agendada
-                partido.save()
-                
-                if partido.partido_siguiente:
-                    curr_min = fecha_minima_por_partido.get(partido.partido_siguiente.id_partido, hoy)
-                    # El partido siguiente debe jugarse al menos un día después de este
-                    fecha_minima_por_partido[partido.partido_siguiente.id_partido] = max(curr_min, fecha_agendada + datetime.timedelta(days=1))
-
-        return Response({"status": f"Cuadro y agendas estructuradas con éxito para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
+        return Response({"status": f"Cuadro estructurado. Partidos iniciales agendados para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
         
     @action(detail=True, methods = ['post'])
     def inscribir(self, request, pk=None):
         torneo = self.get_object()
         user = request.user
-        # Validar que el torneo este en estado "Programado"
         if torneo.estado_torneo != 'Programado':
             return Response({"detail": "No puedes inscribirte en un torneo que ya ha comenzado o finalizado."}, status=status.HTTP_400_BAD_REQUEST) 
 
-        #validar la restriccion de Rama
         perfil = getattr(user, 'perfil', None)
         sexo_usuario = perfil.sexo_usuario if perfil else None
         rama_torneo = torneo.rama_torneo
 
         if rama_torneo != 'Mixto' and sexo_usuario:
-            #Normalizar para comparar de forma segura
             es_masculino = sexo_usuario.lower() in ['masculino', 'hombre', 'm','varonil']
             es_femenino = sexo_usuario.lower() in ['femenino', 'mujer','femenil', 'f']
 
@@ -334,12 +347,8 @@ class TorneoViewSet(viewsets.ModelViewSet):
                 return Response({"detail": "Este torneo es solo para jugadores varoniles."}, status=status.HTTP_400_BAD_REQUEST)
             if rama_torneo == 'Femenil' and not es_femenino:
                 return Response({"detail": "Este torneo es solo para jugadoras femeniles."}, status=status.HTTP_400_BAD_REQUEST)
-
         
-        # Extraemos la matriz enviada desde el frontend
         matriz_disponibilidad = request.data.get('matriz_disponibilidad')
-        
-        # Creamos la inscripción (el numero_siembra se queda en blanco para que lo llene el admin)
         inscripcion, created = Inscripcion.objects.get_or_create(
             torneo=torneo,
             jugador=user,
@@ -351,31 +360,26 @@ class TorneoViewSet(viewsets.ModelViewSet):
             
         return Response({"detail": "Inscripción exitosa."}, status=status.HTTP_201_CREATED)
 
-    # Cancelar / dar de baja inscripcion
     @action(detail=True, methods=['delete'])
     def cancelar_inscripcion(self, request, pk=None):
         torneo = self.get_object()
         user = request.user
-        
         try:
             inscripcion = Inscripcion.objects.get(torneo=torneo, jugador=user)
             inscripcion.delete()
             return Response({"detail": "Inscripción cancelada exitosamente."}, status=status.HTTP_200_OK)
         except Inscripcion.DoesNotExist:
             return Response({"detail": "No estás inscrito en este torneo."}, status=status.HTTP_404_NOT_FOUND)
-
-
         
     @action(detail=True, methods=['get'])
     def inscripciones(self, request, pk=None):
         torneo = self.get_object()
-        inscripciones = torneo.inscripciones.all() # Usa el related_name que definiste en tu modelo
+        inscripciones = torneo.inscripciones.all() 
         serializer = InscripcionesSerializer(inscripciones, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def mis_inscripciones(self, request):
-        # Filtramos los torneos donde el usuario actual tenga una inscripción
         torneos_inscritos = Torneo.objects.filter(inscripciones__jugador=request.user)
         serializer = TorneoSerializer(torneos_inscritos, many=True)
         return Response(serializer.data)
@@ -397,7 +401,6 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             return Inscripcion.objects.all()
         return Inscripcion.objects.filter(jugador=user)
 
-
 class PartidoViewSet(viewsets.ModelViewSet):
     queryset = Partido.objects.all()
     serializer_class = PartidoSerializer
@@ -407,15 +410,11 @@ class ResultadoViewSet(viewsets.ModelViewSet):
     serializer_class = ResultadoSerializer
 
     def perform_create(self, serializer):
-        """
-        Intercepta el guardado del resultado para cerrar el partido 
-        y empujar al ganador a la siguiente posición disponible del árbol.
-        """
         resultado = serializer.save()
         partido = resultado.partido
         ganador = resultado.ganador
 
-        #Cierra el partido y marca como finalizado
+        # Cierra el partido y marca como finalizado
         partido.estado = 'Finalizado'
         partido.save()
         
@@ -428,6 +427,11 @@ class ResultadoViewSet(viewsets.ModelViewSet):
                 sig_partido.jugador2 = ganador
             sig_partido.save()
 
+            # ¡AQUÍ ESTÁ EL GATILLO DEL JUST-IN-TIME!
+            # Si al inyectar al ganador, el partido siguiente ya cuenta con sus 2 contendientes:
+            if sig_partido.jugador1 and sig_partido.jugador2:
+                asignar_horario_dinamico(sig_partido)
+
         es_partido_final = False
         
         if not partido.partido_siguiente:
@@ -435,20 +439,8 @@ class ResultadoViewSet(viewsets.ModelViewSet):
         elif hasattr(partido, 'fase') and partido.fase and 'final' in str(partido.fase).lower():
             es_partido_final = True
 
-        # Si detectamos que es la final, cerramos el torneo de forma directa
         if es_partido_final:
             torneo = getattr(partido, 'torneo', None)
-            
-            # Si el partido no tiene el campo .torneo directo, lo buscamos por relaciones comunes
-            if not torneo and hasattr(partido, 'categoria'):
-                pass # por si acaso
-            
             if torneo:
                 torneo.estado_torneo = 'Finalizado'
                 torneo.save()
-                print(f"✅ ¡ÉXITO! Torneo '{torneo.nombre_torneo}' actualizado automáticamente a 'Finalizado'.")
-            else:
-                # Búsqueda de emergencia del torneo asociado a este partido
-                from .models import Torneo
-                # Si el partido tiene una llave foránea indirecta, la localizamos:
-                print("⚠️ Advertencia: No se encontró la relación directa .torneo en el objeto partido.")
