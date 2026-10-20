@@ -47,7 +47,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Contenido principal */}
       <main className="container mx-auto px-4 py-12 max-w-7xl">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Mi Panel</h2>
@@ -63,15 +63,15 @@ export default function DashboardPage() {
         )}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Left Column - User Profile */}
+          {/* Columna izquierda: Perfil del usuario */}
           <div className="lg:col-span-1">
             <UserProfile user={user} isLoading={isLoading} />
           </div>
 
-          {/* Right Column - Actions and Tournaments */}
+          {/* Columna derecha*/}
           <div className="space-y-8 lg:col-span-2">
             {/* Tarjeta de Gestión: Solo aparece si el usuario es Administrador (is_staff o is_superuser) */}
-            {!isLoading && user && (
+            {!isLoading && user && user.perfil && user.perfil.rol === "Administrador" && (
               <div className="card-base p-6">
                 <h3 className="text-lg font-bold text-foreground mb-2">
                   Gestionar Torneos
