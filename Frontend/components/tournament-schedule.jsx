@@ -113,7 +113,9 @@ export default function TournamentGridSchedule({ matches }) {
         <table className="w-full border-collapse border border-border text-xs">
           <thead>
             <tr className="bg-primary/10 text-primary">
-              <th className="border border-border p-3 w-32 text-center font-bold">Horario</th>
+              <th className="border p-3 w-32 text-center font-bold sticky left-0 z-20 bg-primary/10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                Horario
+              </th>
               {diasDeLaSemana.map((fechaDia, index) => (
                 <th key={index} className="border border-border p-2 text-center">
                   <div className="font-bold uppercase tracking-wider">{nombresDias[index]}</div>
@@ -130,7 +132,7 @@ export default function TournamentGridSchedule({ matches }) {
 
               return (
                 <tr key={bloque} className="transition-colors">
-                  <td className="border border-border p-3 text-center font-mono font-bold text-muted-foreground bg-secondary/30 whitespace-nowrap">
+                  <td className="border p-3 text-center font-mono font-bold text-muted-foreground bg-secondary/30 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     {bloque} hrs
                   </td>
 
