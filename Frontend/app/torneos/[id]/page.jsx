@@ -213,7 +213,7 @@ export default function TournamentDetailPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-4xl relative">
+    <div className="container mx-auto p-6 space-y-6 max-w-6xl relative">
       {/* Enlace para volver al panel */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 max-w-7xl flex items-center justify-between">
@@ -285,7 +285,8 @@ export default function TournamentDetailPage() {
       </div>
 
       {/* Sección Inferior: Jugadores y Llaves */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <div className={"grid gap-6 " + (isAdmin ? "md:grid-cols-2" : "md:grid")}>
         {/* Lista de Jugadores Inscritos */}
         <div className="card-base p-6 space-y-4">
           <h3 className="text-lg font-bold text-foreground">Jugadores Inscritos</h3>
@@ -313,6 +314,7 @@ export default function TournamentDetailPage() {
         </div>
 
         {/* Bracket / Llaves y Botones de Administración */}
+        {isAdmin && (
         <div className="card-base p-6 space-y-4">
           <div className="flex flex-col gap-3">
             <h3 className="text-lg font-bold text-foreground">Botones de administrador</h3>
@@ -354,6 +356,7 @@ export default function TournamentDetailPage() {
           </div>
 
         </div>
+        )}
       </div>
 
       {/* MODAL DE DISPONIBILIDAD PARA INSCRIPCIÓN */}
