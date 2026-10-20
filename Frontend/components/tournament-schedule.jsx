@@ -77,7 +77,7 @@ export default function TournamentGridSchedule({ matches }) {
         <div className="flex justify-between items-center mb-4">
           <div>
             <h3 className="text-base font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-              Calendario semannal de partidos
+              Calendario semanal de partidos
               <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-xs capitalize">
                 {mesActual}
               </span>
