@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CreateTournamentForm } from "@/components/create-tournament-form";
+import { CreateTournamentForm } from "@/components/form_crearTorneo";
 
 export default function CreateTournamentPage() {
   return (
