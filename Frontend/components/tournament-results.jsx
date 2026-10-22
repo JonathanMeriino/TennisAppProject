@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import { tournaments } from "@/lib/api";
-import TournamentSchedule from '@/components/tournament-schedule'; // Ajusta la ruta según tu proyecto
+import TournamentSchedule from '@/components/torneos_calendario'; // Ajusta la ruta según tu proyecto
 
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
