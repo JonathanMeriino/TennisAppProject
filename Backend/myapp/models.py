@@ -69,7 +69,7 @@ class Torneo(models.Model):
         ('Mixto', 'Mixto'),
     ]
     rama_torneo = models.CharField(max_length=50, choices=RAMA_CHOICES, default='Varonil') # Ej: Varonil, Femenil, Mixto
-    canchas_disponibles = models.PositiveIntegerField(default=1, help_text="Número de canchas habilitadas para este torneo")
+    canchas_disponibles = models.PositiveIntegerField( help_text="Número de canchas habilitadas para este torneo")
 
     ESTADO_CHOICES = [
         ('Programado', 'Programado'),
