@@ -86,7 +86,7 @@ export function CreateTournamentForm() {
           />
         </div>
 
-        {/* Fecha de inicio y final */}
+        {/* Fecha de inicio */}
         
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
@@ -142,26 +142,8 @@ export function CreateTournamentForm() {
             </select>
           </div>
 
-        
-        {/* Estado del Torneo */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Estado Inicial
-            </label>
-            <select
-              name="estado"
-              value={formData.estado}
-              onChange={handleChange}
-              className="input-field"
-            >
-              <option value="Programado">Programado</option>
-              <option value="En Curso">En Curso</option>
-              <option value="Finalizado">Finalizado</option>
-            </select>
-          </div>
 
-
-        {/* Buttons */}
+        {/* Botones de accion*/}
         <div className="flex gap-3 pt-6">
           <Link href="/dashboard" className="btn-outline flex-1 text-center">
             Cancelar
