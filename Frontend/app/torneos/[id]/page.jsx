@@ -423,7 +423,7 @@ export default function TournamentDetailPage() {
                   onClick={handleResetearTorneo}
                   className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
                 >
-                  Resetear Torneo y Borrar Cuadro
+                  Resetear Torneo
                 </button>
               </div>
             )}

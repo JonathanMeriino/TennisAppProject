@@ -72,7 +72,7 @@ export default function TournamentResults({ matches, tournamentId }) {
       )}
 
       {/* SECCIÓN DEL BRACKET / ÁRBOL DEL TORNEO */}
-      <h3 className="text-lg font-bold text-foreground">Bracket / Árbol del Torneo</h3>
+      <h3 className="text-lg font-bold text-foreground">Cuadro del Torneo</h3>
 
       {matches.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
