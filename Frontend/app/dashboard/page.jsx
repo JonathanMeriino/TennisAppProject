@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { UserProfile } from "@/components/user-profile";
+import { UserProfile } from "@/components/perfil_usuario";
 import { UserTournaments } from "@/components/torneos_usuario";
 import { MyInscribedTournaments } from "@/components/my-inscribed-tournaments";
 import { auth, isAuthenticated } from "@/lib/api";
