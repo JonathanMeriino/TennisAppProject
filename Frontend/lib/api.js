@@ -52,62 +52,6 @@ export function isAuthenticated() {
   return !!token;
 }
 
-// --- Fetch base con manejo de errores y token ------------------------------
-/*
-async function request(path, { method = "GET", body, headers = {}, isForm = false } = {}) {
-  const token = getToken();
-  const finalHeaders = { ...headers };
-
-  if (token) {
-    finalHeaders.Authorization = `Bearer ${token}`;
-  }
-
-  let payload = body;
-  if (body && !isForm) {
-    finalHeaders["Content-Type"] = "application/json";
-    payload = JSON.stringify(body);
-  }
-
-  let res;
-  try {
-    res = await fetch(`${API_URL}${path}`, {
-      method,
-      headers: finalHeaders,
-      body: payload,
-    });
-  } catch (err) {
-    throw new Error(
-      "No se pudo conectar con el servidor. Verifica que tu backend esté corriendo en " +
-        API_URL,
-    );
-  }
-
-  // Sesión expirada / no autorizado
-  if (res.status === 401) {
-    clearToken();
-    throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
-  }
-
-  let data = null;
-  const text = await res.text();
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-  }
-
-  if (!res.ok) {
-    const message =
-      (data && (data.message || data.detail || data.error)) ||
-      `Error ${res.status}`;
-    throw new Error(message);
-  }
-
-  return data;
-}*/
-
 async function request(url, options = {}) {
   const token = localStorage.getItem("access_token");
 
