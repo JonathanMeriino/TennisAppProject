@@ -8,7 +8,7 @@ export default function RegistroExitosoPage() {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 max-w-7xl">
-          <h1 className="text-2xl font-bold text-primary">Tournify</h1>
+          <h1 className="text-2xl font-bold text-primary">Tennis App</h1>
         </div>
       </header>
 
