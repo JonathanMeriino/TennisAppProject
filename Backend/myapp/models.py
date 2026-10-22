@@ -63,7 +63,6 @@ class Torneo(models.Model):
     id_torneo = models.AutoField(primary_key=True)
     nombre_torneo = models.CharField(max_length=150)
     fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
     RAMA_CHOICES = [
         ('Varonil', 'Varonil'),
         ('Femenil', 'Femenil'),
