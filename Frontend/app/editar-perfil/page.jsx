@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { EditProfileForm } from "@/components/edit-profile-form";
+import { EditProfileForm } from "@/components/usuario_editarPerfil";
 
 export default function EditProfilePage() {
   return (

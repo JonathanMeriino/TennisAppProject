@@ -19,12 +19,7 @@ export function EditProfileForm() {
     boleta: "",
     escuela: "",
   });
-/*
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });*/
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -62,11 +57,6 @@ export function EditProfileForm() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-/*
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswords((prev) => ({ ...prev, [name]: value }));
-  };*/
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,15 +71,7 @@ export function EditProfileForm() {
       setError("Por favor ingresa una edad válida (entre 8 y 100)");
       return;
     }
-/*
-    if (
-      passwords.newPassword &&
-      passwords.newPassword !== passwords.confirmPassword
-    ) {
-      setError("Las nuevas contraseñas no coinciden");
-      return;
-    }
-*/
+
     setIsLoading(true);
 
     try {
@@ -104,11 +86,6 @@ export function EditProfileForm() {
         boleta: formData.boleta,
         escuela: formData.escuela,
       };
-/*
-      if (passwords.newPassword) {
-        payload.currentPassword = passwords.currentPassword;
-        payload.newPassword = passwords.newPassword;
-      }*/
 
       await auth.updateProfile(payload);
       setSuccess("Perfil actualizado correctamente");
@@ -138,7 +115,6 @@ export function EditProfileForm() {
           </div>
         )}
 
-        {/* Personal Information */}
         <div>
           <h3 className="text-lg font-bold text-foreground mb-4">
             Información Personal
@@ -302,8 +278,6 @@ export function EditProfileForm() {
           </div>
         </div>
 
-
-        {/* Buttons */}
         <div className="flex gap-3 pt-6 border-t border-border">
           <Link href="/dashboard" className="btn-outline flex-1 text-center">
             Cancelar
