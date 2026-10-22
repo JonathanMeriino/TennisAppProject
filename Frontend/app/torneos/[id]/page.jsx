@@ -39,6 +39,42 @@ export default function TournamentDetailPage() {
   // Determinar si el usuario actual es administrador (según tu estructura de roles/superuser)
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Estados para la edición (agrégalos junto con tus otros useState)
+const [isEditing, setIsEditing] = useState(false);
+const [editForm, setEditForm] = useState({
+  nombre_torneo: '',
+  rama_torneo: '',
+  fecha_inicio: '',
+  categoria: '',
+  canchas_disponibles: 2
+});
+const [categories, setCategories] = useState([]);
+
+useEffect(() => {
+  const fetchCategories = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/categoria/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Categorías obtenidas de la API:", data); // Para verificar en la consola
+        setCategories(data);
+      } else {
+        console.error("Error al obtener categorías:", response.status);
+      }
+    } catch (error) {
+      console.error("Error de red al obtener categorías:", error);
+    }
+  };
+
+  fetchCategories();
+}, []);
+
   useEffect(() => {
     if (!id) return;
     
@@ -169,6 +205,54 @@ export default function TournamentDetailPage() {
   
   const handleSiembraChange = (inscripcionId, value) => {
     setSiembraValues((prev) => ({ ...prev, [inscripcionId]: value }));
+  };
+
+  // Función para abrir el modal y precargar los datos actuales
+  const handleOpenEdit = () => {
+    setEditForm({
+      nombre_torneo: tournament.nombre_torneo || '',
+      rama_torneo: tournament.rama_torneo || '',
+      fecha_inicio: tournament.fecha_inicio || '',
+      categoria: tournament.categoria || tournament.categoria_id || '',
+      canchas_disponibles: tournament.canchas_disponibles || 2
+    });
+    setIsEditing(true);
+  };
+  // Función para enviar la actualización al backend
+  const handleUpdateTorneo = async (e) => {
+    e.preventDefault();
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
+    // Garantizar que canchas_disponibles tenga al menos 1
+    const payload = {
+      ...editForm,
+      canchas_disponibles: editForm.canchas_disponibles === '' ? 1 : editForm.canchas_disponibles,
+      categoria: parseInt(editForm.categoria, 10)
+    };
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/torneo/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        toast.success("Parámetros del torneo actualizados exitosamente.");
+        setIsEditing(false);
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        console.error(errorData);
+        toast.error("Error al actualizar los parámetros del torneo.");
+      }
+    } catch (error) {
+      console.error("Error de red:", error);
+      toast.error("Error de red al intentar conectar con el servidor.");
+    }
   };
 
   const handleEliminarTorneo = async () => {
@@ -320,9 +404,43 @@ export default function TournamentDetailPage() {
             <span className="text-xs bg-muted text-muted-foreground font-medium px-3 py-1.5 rounded-full">
               {tournament.estado_torneo === 'En Curso' ? 'Inscripciones cerradas (Torneo En Curso)' : tournament.estado_torneo}
             </span>
+            
+            {/* Botón dinámico: Inscribirse o Darse de baja */}
+            {tournament?.estado_torneo === 'Programado' ? (
+            usuarioInscrito ? (
+              <button
+                onClick={handleLeaveTournament}
+                disabled={isLeaving}
+                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-red-200"
+              >
+                {isLeaving ? "Procesando baja..." : "Darse de baja del torneo"}
+              </button>
+            ) : (
+              <button
+                onClick={handleOpenInscribeModal}
+                className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-blue-200"
+              >
+                Inscribirme al Torneo
+              </button>
+            )
+          ) : (
+            <span className="text-xs px-3 py-1 bg-muted text-muted-foreground rounded-full font-medium">
+              No puedes modificar tu inscripción (Torneo {tournament?.estado_torneo || "en proceso"})
+            </span>
+          )}
 
+            {/* Botón de Editar Torneo (Solo Admin) */}
+              {isAdmin && (
+                <button
+                  onClick={handleOpenEdit}
+                  className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-blue-200"
+                >
+                  Editar Parámetros
+                </button>
+              )}
             {/* Botón de Eliminar Torneo (Visible solo para administradores) */}
             {isAdmin && (
+              
               <button
                 onClick={handleEliminarTorneo}
                 className="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-red-200"
@@ -572,6 +690,123 @@ export default function TournamentDetailPage() {
         </div>
 
         
+      )}
+      {/* Modal / Formulario Flotante de Edición */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-lg max-w-md w-full p-6 space-y-4 shadow-lg">
+            <div className="flex justify-between items-center border-b border-border pb-3">
+              <h3 className="text-lg font-bold text-foreground">Editar Parámetros del Torneo</h3>
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="text-muted-foreground hover:text-foreground text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateTorneo} className="space-y-4">
+              {/* Nombre del Torneo */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Nombre del Torneo</label>
+                <input
+                  type="text"
+                  value={editForm.nombre_torneo}
+                  onChange={(e) => setEditForm({...editForm, nombre_torneo: e.target.value})}
+                  className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+                  required
+                />
+              </div>
+
+              {/* Fecha de Inicio */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Fecha de Inicio</label>
+                <input
+                  type="date"
+                  value={editForm.fecha_inicio}
+                  onChange={(e) => setEditForm({...editForm, fecha_inicio: e.target.value})}
+                  className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+                  required
+                />
+              </div>
+
+              {/* Categoría */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Categoría</label>
+                <select
+                  value={editForm.categoria}
+                  onChange={(e) => setEditForm({...editForm, categoria: e.target.value})}
+                  className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+                  required
+                >
+                  <option value="">Selecciona tu categoría</option>
+                  {categories && categories.length > 0 ? (
+                    categories.map((cat) => (
+                      <option 
+                        key={cat.id_categoria || cat.id} 
+                        value={cat.id_categoria || cat.id}
+                      >
+                        {cat.nombre_categoria || cat.nombre || `Categoría ${cat.id_categoria || cat.id}`}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Cargando categorías...</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Rama */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Rama</label>
+                <select
+                  value={editForm.rama_torneo}
+                  onChange={(e) => setEditForm({...editForm, rama_torneo: e.target.value})}
+                  className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+                >
+                  <option value="Varonil">Varonil</option>
+                  <option value="Femenil">Femenil</option>
+                  <option value="Mixto">Mixto</option>
+                </select>
+              </div>
+
+              {/* Número de Canchas Disponibles */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Número de Canchas Disponibles</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editForm.canchas_disponibles}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditForm({
+                      ...editForm,
+                      canchas_disponibles: val === '' ? '' : parseInt(val, 10)
+                    });
+                  }}
+                  className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+                  required
+                />
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted rounded-md transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
       
       
