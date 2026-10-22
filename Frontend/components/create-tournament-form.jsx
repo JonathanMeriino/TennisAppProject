@@ -104,20 +104,6 @@ export function CreateTournamentForm() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Fecha de Finalización
-            </label>
-            <input
-              id="fecha_fin"
-              name="fecha_fin"
-              type="date"
-              value={formData.fecha_fin}
-              onChange={handleChange}
-              required
-              className="input-field"
-            />
-          </div>
         
         {/* Rama y categoria */}
         <div>
