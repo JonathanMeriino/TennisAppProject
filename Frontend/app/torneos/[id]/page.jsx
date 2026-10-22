@@ -111,6 +111,8 @@ export default function TournamentDetailPage() {
       return;
     }
 
+    
+
     setIsRegistering(true);
     const loadingToast = toast.loading("Inscribiendo al torneo...");
 
@@ -168,6 +170,33 @@ export default function TournamentDetailPage() {
   const handleSiembraChange = (inscripcionId, value) => {
     setSiembraValues((prev) => ({ ...prev, [inscripcionId]: value }));
   };
+
+  const handleEliminarTorneo = async () => {
+  if (!window.confirm("¿Estás seguro de que deseas eliminar este torneo? Se borrarán todos los datos y partidos asociados permanentemente.")) return;
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/api/torneo/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      toast.success("Torneo eliminado exitosamente.");
+      // Redirigir al usuario al panel principal o listado de torneos tras borrarlo
+      window.location.href = "/dashboard"; 
+    } else {
+      toast.error("Hubo un error al intentar eliminar el torneo.");
+    }
+  } catch (error) {
+    console.error("Error de red:", error);
+    toast.error("Error de red al intentar conectar con el servidor.");
+  }
+};
 
   const handleSaveSiembras = async () => {
     const loadingToast = toast.loading("Actualizando números de siembra...");
@@ -278,58 +307,50 @@ export default function TournamentDetailPage() {
       </header>
       
       {/* Tarjeta de Información General */}
-      <div className="card-base p-6 space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="card-base p-6 mb-6 relative">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <span className="text-xs px-3 py-1 bg-primary/10 text-primary rounded-full font-medium">
+            <span className="text-xs bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full">
               Eliminación Directa
             </span>
-            <h1 className="text-2xl font-bold text-foreground mt-2">
-              {tournament?.nombre_torneo}
-            </h1>
+            <h1 className="text-2xl font-bold text-foreground mt-2">{tournament.nombre_torneo}</h1>
           </div>
-          
-          {/* Botón dinámico: Inscribirse o Darse de baja */}
-          {tournament?.estado_torneo === 'Programado' ? (
-          usuarioInscrito ? (
-            <button
-              onClick={handleLeaveTournament}
-              disabled={isLeaving}
-              className="bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 font-medium px-6 py-2 rounded-lg transition-colors whitespace-nowrap text-sm"
-            >
-              {isLeaving ? "Procesando baja..." : "Darse de baja del torneo"}
-            </button>
-          ) : (
-            <button
-              onClick={handleOpenInscribeModal}
-              className="btn-primary px-6 py-2 whitespace-nowrap"
-            >
-              Inscribirme al Torneo
-            </button>
-          )
-        ) : (
-          <span className="text-xs px-3 py-1 bg-muted text-muted-foreground rounded-full font-medium">
-            Inscripciones cerradas (Torneo {tournament?.estado_torneo || "en proceso"})
-          </span>
-        )}
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs bg-muted text-muted-foreground font-medium px-3 py-1.5 rounded-full">
+              {tournament.estado_torneo === 'En Curso' ? 'Inscripciones cerradas (Torneo En Curso)' : tournament.estado_torneo}
+            </span>
+
+            {/* Botón de Eliminar Torneo (Visible solo para administradores) */}
+            {isAdmin && (
+              <button
+                onClick={handleEliminarTorneo}
+                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-red-200"
+                title="Eliminar Torneo"
+              >
+                Eliminar Torneo
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border text-sm text-muted-foreground">
+        {/* Fila inferior con los datos (Inicio, Categoría, Rama, Estado) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border text-sm">
           <div>
-            <p className="text-xs font-semibold text-foreground">Inicio</p>
-            <p>{tournament?.fecha_inicio}</p>
+            <p className="text-muted-foreground text-xs">Inicio</p>
+            <p className="font-medium text-foreground">{tournament.fecha_inicio}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-foreground">Categoría</p>
-            <p>{tournament?.nombre_categoria || "Por definir"}</p>
+            <p className="text-muted-foreground text-xs">Categoría</p>
+            <p className="font-medium text-foreground">{tournament.categoria_nombre || "Por definir"}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-foreground">Rama</p>
-            <p>{tournament?.rama_torneo}</p>
+            <p className="text-muted-foreground text-xs">Rama</p>
+            <p className="font-medium text-foreground">{tournament.rama_torneo}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-foreground">Estado</p>
-            <p>{tournament?.estado_torneo}</p>
+            <p className="text-muted-foreground text-xs">Estado</p>
+            <p className="font-medium text-foreground">{tournament.estado_torneo}</p>
           </div>
         </div>
       </div>
