@@ -19,6 +19,7 @@ const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "
 export default function TournamentDetailPage() {
   const params = useParams();
   const id = params?.id;
+  
 
   const [tournament, setTournament] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -186,6 +187,32 @@ export default function TournamentDetailPage() {
       toast.error("Error al guardar las siembras.");
     }
   };
+  const handleResetearTorneo = async () => {
+  if (!window.confirm("¿Estás seguro de resetear el torneo? Se borrarán todos los partidos actuales y se abrirán de nuevo las inscripciones.")) return;
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/api/torneo/${id}/resetear_torneo/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      toast.success("Torneo reseteado correctamente.");
+      window.location.reload(); // Recarga la página para refrescar el estado del cuadro y del torneo
+    } else {
+      const errorData = await response.json();
+      toast.error(errorData.error || "No se pudo resetear el torneo.");
+    }
+  } catch (error) {
+    console.error("Error de red:", error);
+    toast.error("Error de red al intentar conectar con el servidor.");
+  }
+};
   const handleOpenInscribeModal = () => {
     // Validamos la rama antes de abrir el modal de disponibilidad
     const sexoUsuario = currentUser?.perfil?.sexo_usuario?.toLowerCase() || "";
@@ -207,6 +234,29 @@ export default function TournamentDetailPage() {
     // Si pasa la validación, abre el modal normalmente
     setIsModalOpen(true);
   };
+  
+  const handleEliminarJugador = async (idInscripcion) => {
+  if (!window.confirm("¿Estás seguro de que deseas eliminar a este jugador del torneo?")) return;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;      
+  try {
+    // Nota el cambio de 'inscripciones' a 'inscripcion' (en singular)
+    const response = await fetch(`http://127.0.0.1:8000/api/inscripcion/${idInscripcion}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.ok) {
+      setParticipants(participants.filter(ins => ins.id_inscripcion !== idInscripcion));
+      toast.success("Jugador eliminado exitosamente.");
+    } else {
+      toast.error("Hubo un error al procesar la eliminación.");
+    }
+  } catch (error) {
+    toast.error("Error de red al intentar conectar con el servidor.");
+  }
+};
 
   if (isLoading) {
     return <div className="container mx-auto p-8 text-center text-muted-foreground">Cargando detalles del torneo...</div>;
@@ -270,8 +320,8 @@ export default function TournamentDetailPage() {
             <p>{tournament?.fecha_inicio}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-foreground">Finalización</p>
-            <p>{tournament?.fecha_fin || "Por definir"}</p>
+            <p className="text-xs font-semibold text-foreground">Categoría</p>
+            <p>{tournament?.categoria_torneo || "Por definir"}</p>
           </div>
           <div>
             <p className="text-xs font-semibold text-foreground">Rama</p>
@@ -289,7 +339,12 @@ export default function TournamentDetailPage() {
       <div className={"grid gap-6 " + (isAdmin ? "md:grid-cols-2" : "md:grid")}>
         {/* Lista de Jugadores Inscritos */}
         <div className="card-base p-6 space-y-4">
-          <h3 className="text-lg font-bold text-foreground">Jugadores Inscritos</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <h3 className="text-lg font-bold text-foreground">Jugadores Inscritos</h3>
+            <span className="bg-green-100 text-green-700 text-sm font-semibold px-3 py-1 rounded-full">
+              {participants.length}
+            </span>
+          </div>
           {participants.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
               Aún no hay jugadores inscritos en este torneo.
@@ -297,16 +352,29 @@ export default function TournamentDetailPage() {
           ) : (
             <ul className="space-y-2">
               {participants.map((participant, index) => (
-                <li
+                <li 
                   key={participant.id_inscripcion || index}
                   className="flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 text-sm"
                 >
-                  <span className="font-medium text-foreground">
-                    {participant.nombre_jugador || participant.jugador_username || participant.username || `Participante ${index + 1}`}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
-                  </span>
+                  {/* Contenedor de información del jugador agrupada a la izquierda */}
+                  <div className="flex flex-col">
+                    <span className="font-medium text-foreground">
+                      {participant.nombre_jugador || participant.jugador_username || participant.username || `Participante ${index + 1}`}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
+                    </span>
+                  </div>
+
+                  {/* Botón de eliminación protegido por rol */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleEliminarJugador(participant.id_inscripcion)}
+                      className="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-red-100 ml-4"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -350,6 +418,12 @@ export default function TournamentDetailPage() {
                   className="btn-outline text-xs py-2 px-4 w-full text-center"
                 >
                   Generar llaves de enfrentamientos
+                </button>
+                <button
+                  onClick={handleResetearTorneo}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                  Resetear Torneo y Borrar Cuadro
                 </button>
               </div>
             )}
