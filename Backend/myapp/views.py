@@ -438,6 +438,22 @@ class TorneoViewSet(viewsets.ModelViewSet):
         serializer = PartidoSerializer(partidos, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'], url_path='resetear_torneo')
+    def resetear_torneo(self, request, pk=None):
+        torneo = self.get_object()
+        
+        # 1. Borrar todos los partidos asociados a este torneo
+        torneo.partidos.all().delete()
+        
+        # 2. Cambiar el estado del torneo de vuelta a 'Programado'
+        torneo.estado_torneo = 'Programado'
+        torneo.save()
+        
+        return Response(
+            {"status": "El torneo ha sido reseteado exitosamente a estado Programado y el cuadro fue eliminado."}, 
+            status=status.HTTP_200_OK
+        )
+
 class InscripcionViewSet(viewsets.ModelViewSet):
     serializer_class = InscripcionesSerializer
     permission_classes = [permissions.IsAuthenticated]
