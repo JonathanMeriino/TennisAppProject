@@ -63,9 +63,9 @@ export function MyInscribedTournaments() {
                   <span>Rama: {tournament.rama_torneo}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>🎯</span>
-                  <span>Fin: {tournament.fecha_fin || "Por definir"}</span>
-                </div>
+                    <span>Categoría: {tournament.nombre_categoria || "Por definir"}</span>
+                  </div>
+                  
               </div>
             </div>
           );
