@@ -126,6 +126,12 @@ class UserSerializer(serializers.ModelSerializer):
 class InscripcionesSerializer(serializers.ModelSerializer):
     nombre_jugador = serializers.CharField(source='jugador.username', read_only=True)
     nombre_torneo = serializers.CharField(source='torneo.nombre', read_only=True)
+    # Extrae el nombre de la categoría asignada al perfil del jugador
+    categoria_jugador = serializers.CharField(
+        source='jugador.perfil.categoria.nombre_categoria', 
+        read_only=True, 
+        default='Sin categoría'
+    )
 
     class Meta:
         model = Inscripcion
