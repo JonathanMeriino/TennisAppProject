@@ -5,6 +5,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
+from ortools.sat.python import cp_model  # <--- IMPORTACIÓN DEL SOLVER DE GOOGLE
+
 from .serializer import (RolesSerializer, UserSerializer, TorneoSerializer, InscripcionesSerializer, PartidoSerializer,ResultadoSerializer )
 from .models import (
     Roles, User, Torneo,
@@ -47,7 +49,6 @@ def asignar_horario_dinamico(partido):
     hoy = datetime.date.today()
     fecha_minima_calculada = hoy
     
-    # Buscar qué partidos ganaron el jugador 1 y el jugador 2 para llegar aquí
     partidos_previos = Partido.objects.filter(
         partido_siguiente=partido, 
         estado='Finalizado'
@@ -55,25 +56,19 @@ def asignar_horario_dinamico(partido):
     
     for previo in partidos_previos:
         if previo.fecha:
-            # Convertir el string YYYY-MM-DD a objeto Date
             fecha_previo = previo.fecha
-            # Asegurarse de que ambos sean objetos date antes de comparar
             if isinstance(fecha_previo, str):
-                # Por si acaso la base de datos sí devolvió un string
                 fecha_previo = datetime.datetime.strptime(fecha_previo, '%Y-%m-%d').date()
-                
             if fecha_previo >= fecha_minima_calculada:
-                # La nueva fecha mínima debe ser estrictamente un día después del último partido jugado
                 fecha_minima_calculada = fecha_previo + datetime.timedelta(days=1)
                 
-    # Si por alguna razón la fecha calculada es en el pasado, usamos mañana
     if fecha_minima_calculada <= hoy:
         fecha_minima_calculada = hoy + datetime.timedelta(days=1)
 
     agendado = False
 
     # 2. --- Intento 1: Intersección Matemática Voraz ---
-    for offset in range(14): # Buscar en los próximos 14 días a partir de la fecha base
+    for offset in range(14): 
         eval_date = fecha_minima_calculada + datetime.timedelta(days=offset)
         dia_str = normalizar_dia(dias_semana[eval_date.weekday()])
         
@@ -85,7 +80,6 @@ def asignar_horario_dinamico(partido):
             for hora_raw in comunes:
                 hora_limpia = hora_raw.split("-")[0].strip() if "-" in hora_raw else hora_raw.strip()
                 if hora_limpia in horarios_bloque:
-                    # Validar directamente en Base de Datos si hay canchas libres
                     ocupadas = Partido.objects.filter(torneo=torneo, fecha=eval_date, hora=hora_limpia).count()
                     if ocupadas < canchas_disponibles:
                         partido.fecha = eval_date.strftime('%Y-%m-%d')
@@ -97,8 +91,8 @@ def asignar_horario_dinamico(partido):
     # 3. --- Intento 2: Fallback (Fin de semana) si no tienen agendas compatibles ---
     if not agendado:
         eval_date = fecha_minima_calculada
-        while (eval_date - fecha_minima_calculada).days < 21: # Buscar hasta 3 semanas adelante
-            if eval_date.weekday() in [5, 6]: # 5=Sábado, 6=Domingo
+        while (eval_date - fecha_minima_calculada).days < 21:
+            if eval_date.weekday() in [5, 6]: 
                 for hora in horarios_bloque:
                     ocupadas = Partido.objects.filter(torneo=torneo, fecha=eval_date, hora=hora).count()
                     if ocupadas < canchas_disponibles:
@@ -245,9 +239,10 @@ class TorneoViewSet(viewsets.ModelViewSet):
             elif p in sembrados_dict: slots[i] = sembrados_dict.pop(p)
                 
         # =========================================================================
-        # ETAPA 4: EMPAREJAMIENTO DE SLOTS (GREEDY BASE)
+        # ETAPA 4: EMPAREJAMIENTO DE SLOTS (CP-SAT / SOLUCIÓN ÓPTIMA GLOBAL)
         # =========================================================================
         restantes = list(sembrados_dict.values()) + sin_siembra
+        vacios = [i for i, val in enumerate(slots) if val is None]
         
         def get_matriz(jug):
             if not jug or not jug.matriz_disponibilidad: return {}
@@ -264,30 +259,84 @@ class TorneoViewSet(viewsets.ModelViewSet):
             for dia in dias_comunes:
                 if set(m1[dia]).intersection(set(m2[dia])): return True
             return False
+
+        # Solo ejecutar el modelo CP-SAT si hay jugadores para emparejar
+        if restantes and vacios:
+            model = cp_model.CpModel()
             
+            # Variables de decisión: assign[p, v] = 1 si el jugador 'p' ocupa el slot vacío 'v'
+            assign = {}
+            for p in range(len(restantes)):
+                for v in range(len(vacios)):
+                    assign[p, v] = model.NewBoolVar(f'assign_{p}_{v}')
+                    
+            # Restricciones de unicidad: 1 jugador por slot, 1 slot por jugador
+            for p in range(len(restantes)):
+                model.AddExactlyOne([assign[p, v] for v in range(len(vacios))])
+            for v in range(len(vacios)):
+                model.AddExactlyOne([assign[p, v] for p in range(len(restantes))])
+                
+            match_compat_vars = []
+            
+            # Evaluar los partidos de la primera ronda
+            for i in range(potencia_superior // 2):
+                idx_a = i * 2
+                idx_b = i * 2 + 1
+                val_a = slots[idx_a]
+                val_b = slots[idx_b]
+                
+                # Caso A: Ambos slots están vacíos (se enfrentan dos jugadores de 'restantes')
+                if val_a is None and val_b is None:
+                    v_a = vacios.index(idx_a)
+                    v_b = vacios.index(idx_b)
+                    is_compat = model.NewBoolVar(f'compat_match_{i}')
+                    match_compat_vars.append(is_compat)
+                    
+                    for p1 in range(len(restantes)):
+                        for p2 in range(len(restantes)):
+                            if p1 == p2: continue
+                            if not son_compatibles(restantes[p1], restantes[p2]):
+                                # Si p1 está en v_a y p2 está en v_b, y NO son compatibles, is_compat DEBE ser 0
+                                model.AddBoolOr([assign[p1, v_a].Not(), assign[p2, v_b].Not(), is_compat.Not()])
+                                
+                # Caso B: El slot A está vacío y el slot B tiene a un cabeza de serie
+                elif val_a is None and val_b is not None and val_b != 'BYE':
+                    v_a = vacios.index(idx_a)
+                    is_compat = model.NewBoolVar(f'compat_match_{i}')
+                    match_compat_vars.append(is_compat)
+                    for p in range(len(restantes)):
+                        if not son_compatibles(restantes[p], val_b):
+                            model.AddImplication(assign[p, v_a], is_compat.Not())
+                            
+                # Caso C: El slot B está vacío y el slot A tiene a un cabeza de serie
+                elif val_b is None and val_a is not None and val_a != 'BYE':
+                    v_b = vacios.index(idx_b)
+                    is_compat = model.NewBoolVar(f'compat_match_{i}')
+                    match_compat_vars.append(is_compat)
+                    for p in range(len(restantes)):
+                        if not son_compatibles(restantes[p], val_a):
+                            model.AddImplication(assign[p, v_b], is_compat.Not())
+                            
+            # Función Objetivo: Maximizar los partidos con horarios compatibles
+            if match_compat_vars:
+                model.Maximize(sum(match_compat_vars))
+                
+            solver = cp_model.CpSolver()
+            solver.parameters.max_time_in_seconds = 5.0  # Límite de tiempo de seguridad
+            solver_status = solver.Solve(model)
+            
+            # Extraer los resultados si el modelo encuentra la solución óptima
+            if solver_status in [cp_model.OPTIMAL, cp_model.FEASIBLE]:
+                for p in range(len(restantes)):
+                    for v in range(len(vacios)):
+                        if solver.Value(assign[p, v]):
+                            slots[vacios[v]] = restantes[p]
+            else:
+                # Fallback de seguridad por si no convergiere
+                for i, v in enumerate(vacios):
+                    slots[v] = restantes[i]
+
         partidos_primera_ronda = partidos_por_ronda[1]
-
-        for i in range(potencia_superior // 2):
-            idx_a = i * 2
-            idx_b = (i * 2) + 1
-            
-            if slots[idx_a] is None and slots[idx_b] is None and restantes:
-                jugador_base = restantes.pop(0)
-                slots[idx_a] = jugador_base
-                rival = next((c for c in restantes if son_compatibles(jugador_base, c)), None)
-                if rival: restantes.remove(rival)
-                slots[idx_b] = rival if rival else (restantes.pop(0) if restantes else None)
-                
-            elif slots[idx_a] is not None and slots[idx_a] != 'BYE' and slots[idx_b] is None and restantes:
-                rival = next((c for c in restantes if son_compatibles(slots[idx_a], c)), None)
-                if rival: restantes.remove(rival)
-                slots[idx_b] = rival if rival else (restantes.pop(0) if restantes else None)
-                
-            elif slots[idx_b] is not None and slots[idx_b] != 'BYE' and slots[idx_a] is None and restantes:
-                rival = next((c for c in restantes if son_compatibles(slots[idx_b], c)), None)
-                if rival: restantes.remove(rival)
-                slots[idx_a] = rival if rival else (restantes.pop(0) if restantes else None)
-
         for i in range(len(partidos_primera_ronda)):
             partido = partidos_primera_ronda[i]
             partido.jugador1 = slots[i * 2] if slots[i * 2] != 'BYE' else None
@@ -317,9 +366,7 @@ class TorneoViewSet(viewsets.ModelViewSet):
                         sig.save()
                     continue
                     
-                # --- PROGRAMACIÓN DINÁMICA ---
-                # Si el partido ya tiene ambos jugadores, los agendamos.
-                # Si falta alguien, se salta la programación para evitar fechas basura.
+                # Programación dinámica de partidos con ambos jugadores definidos
                 if partido.jugador1 and partido.jugador2 and partido.estado != 'Finalizado':
                     asignar_horario_dinamico(partido)
 
@@ -427,8 +474,7 @@ class ResultadoViewSet(viewsets.ModelViewSet):
                 sig_partido.jugador2 = ganador
             sig_partido.save()
 
-            # ¡AQUÍ ESTÁ EL GATILLO DEL JUST-IN-TIME!
-            # Si al inyectar al ganador, el partido siguiente ya cuenta con sus 2 contendientes:
+            # Disparador de programación dinámica para el siguiente partido si ambos jugadores están definidos
             if sig_partido.jugador1 and sig_partido.jugador2:
                 asignar_horario_dinamico(sig_partido)
 
