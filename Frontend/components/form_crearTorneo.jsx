@@ -16,7 +16,7 @@ export function CreateTournamentForm() {
     categoria: "",
     rama_torneo: "Varonil",
     estado:"Programado",
-    
+    canchas_disponibles: 2,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +46,7 @@ export function CreateTournamentForm() {
         categoria: formData.categoria,
         rama_torneo: formData.rama_torneo,
         estado_torneo: formData.estado,
+        canchas_disponibles: formData.canchas_disponibles,
       };
       const created = await tournamentsApi.create(payload);
       if (created?.id_torneo || created?.id) {
@@ -141,7 +142,30 @@ export function CreateTournamentForm() {
               <option value="Mixto">Mixto</option>
             </select>
           </div>
-
+        { /* Seleccion de numero de canchas disponibles */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Número de Canchas Disponibles
+          </label>
+          <input
+            type="number"
+            min="1"
+            // Permitimos que el valor sea un string vacío si el usuario lo borra
+            value={formData.canchas_disponibles}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData({ 
+                ...formData, 
+                canchas_disponibles: val === '' ? '' : parseInt(val, 10) 
+              });
+            }}
+            className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+            required
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Número de canchas habilitadas simultáneamente para este torneo.
+          </p>
+        </div>
 
         {/* Botones de accion*/}
         <div className="flex gap-3 pt-6">
