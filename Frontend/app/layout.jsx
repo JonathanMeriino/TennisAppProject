@@ -7,11 +7,11 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Tournify - Administrador de Torneos de Tenis",
+  title: "Tennis IPN App",
   description:
-    "Plataforma profesional para organizar y administrar torneos de tenis",
+    "Plataforma para organizar y administrar torneos de tenis",
   icons: {
-    icon: "/icon.svg",
+    icon: "/tennis_ball.png",
   },
 };
 
