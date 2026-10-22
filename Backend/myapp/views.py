@@ -7,9 +7,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from ortools.sat.python import cp_model  # <--- IMPORTACIÓN DEL SOLVER DE GOOGLE
 
-from .serializer import (RolesSerializer, UserSerializer, TorneoSerializer, InscripcionesSerializer, PartidoSerializer,ResultadoSerializer )
+from .serializer import (CategoriaSerializer, RolesSerializer, UserSerializer, TorneoSerializer, InscripcionesSerializer, PartidoSerializer,ResultadoSerializer )
 from .models import (
-    Roles, User, Torneo,
+    Categoria, Roles, User, Torneo,
     Inscripcion, Partido, Resultado
 )
 from .permissions import IsAdminUserCustom
@@ -467,6 +467,10 @@ class InscripcionViewSet(viewsets.ModelViewSet):
 class PartidoViewSet(viewsets.ModelViewSet):
     queryset = Partido.objects.all()
     serializer_class = PartidoSerializer
+
+class CategoriaViewSet(viewsets.ModelViewSet):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer
 
 class ResultadoViewSet(viewsets.ModelViewSet):
     queryset = Resultado.objects.all()
