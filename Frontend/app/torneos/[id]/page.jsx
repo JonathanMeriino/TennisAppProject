@@ -321,7 +321,7 @@ export default function TournamentDetailPage() {
           </div>
           <div>
             <p className="text-xs font-semibold text-foreground">Categoría</p>
-            <p>{tournament?.categoria_torneo || "Por definir"}</p>
+            <p>{tournament?.nombre_categoria || "Por definir"}</p>
           </div>
           <div>
             <p className="text-xs font-semibold text-foreground">Rama</p>
