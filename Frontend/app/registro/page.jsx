@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RegistroForm } from "@/components/registro-form";
+import { RegistroForm } from "@/components/usuario_registro";
 
 export default function RegistroPage() {
   return (
