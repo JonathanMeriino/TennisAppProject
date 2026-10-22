@@ -29,9 +29,16 @@ export default function TorneoJugadores({
                 <span className="font-medium text-foreground">
                   {participant.nombre_jugador || participant.jugador_username || participant.username || `Participante ${index + 1}`}
                 </span>
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
-                </span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                  <span>
+                    Siembra: {participant.numero_siembra ? `#${participant.numero_siembra}` : "Por asignar"}
+                  </span>
+                  <span>•</span>
+                  {/* Visualización de la categoría del participante */}
+                  <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                    {participant.categoria_jugador || participant.categoria || "Sin categoría"}
+                  </span>
+                </div>
               </div>
 
               {/* Botón de eliminación protegido por rol */}
