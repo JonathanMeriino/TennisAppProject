@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { tournaments as tournamentsApi, auth } from "@/lib/api";
-import TournamentResults from "@/components/tournament-results";
+import TournamentResults from "@/components/torneos_cuadro";
 import { toast } from "sonner";
 const TIME_SLOTS = [
   "08:00 - 10:00",
