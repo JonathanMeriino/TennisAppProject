@@ -45,7 +45,8 @@ const [editForm, setEditForm] = useState({
   rama_torneo: '',
   fecha_inicio: '',
   categoria: '',
-  canchas_disponibles: 2
+  canchas_disponibles: 2,
+  descripcion_torneo: ''
 });
 const [categories, setCategories] = useState([]);
 
@@ -213,7 +214,8 @@ useEffect(() => {
       rama_torneo: tournament.rama_torneo || '',
       fecha_inicio: tournament.fecha_inicio || '',
       categoria: tournament.categoria || tournament.categoria_id || '',
-      canchas_disponibles: tournament.canchas_disponibles || 2
+      canchas_disponibles: tournament.canchas_disponibles || 2,
+      descripcion: tournament.descripcion_torneo || ''
     });
     setIsEditing(true);
   };
@@ -226,7 +228,8 @@ useEffect(() => {
     const payload = {
       ...editForm,
       canchas_disponibles: editForm.canchas_disponibles === '' ? 1 : editForm.canchas_disponibles,
-      categoria: parseInt(editForm.categoria, 10)
+      categoria: parseInt(editForm.categoria, 10),
+      descripcion_torneo: editForm.descripcion || ''
     };
 
     try {
