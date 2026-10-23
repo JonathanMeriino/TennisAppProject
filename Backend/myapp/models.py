@@ -26,7 +26,7 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nombre_categoria
 
-# 2. PERFIL DEL USUARIO
+
 class Perfil(models.Model):
     # Relación OneToOne con la tabla nativa User de Django (para correo y password)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
@@ -55,10 +55,6 @@ def save_user_profile(sender, instance, **kwargs):
     instance.perfil.save()
 
 
-# ==========================================
-# 3. CORE DEL TORNEO (ELIMINACIÓN DIRECTA)
-# ==========================================
-
 class Torneo(models.Model):
     id_torneo = models.AutoField(primary_key=True)
     nombre_torneo = models.CharField(max_length=150)
@@ -77,6 +73,7 @@ class Torneo(models.Model):
         ('Finalizado', 'Finalizado'),
     ]
     estado_torneo = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='Programado')
+    descripcion_torneo = models.TextField(null=True, blank=True, help_text="Detalles adicionales del torneo")
     
     # Relación con la tabla Categoria
     categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name='torneos')
