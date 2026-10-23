@@ -98,7 +98,7 @@ export default function TournamentResults({ matches, tournamentId }) {
                     >
                       {/* Jugador 1 */}
                       <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
-                        <span className="font-medium text-foreground">
+                        <span className="font-medium text-foreground flex items-center">
                           {partido.username_j1 ? (
                             <>
                               {partido.siembra_j1 && (
@@ -112,13 +112,20 @@ export default function TournamentResults({ matches, tournamentId }) {
                             "Bye / Por definir"
                           )}
                         </span>
+
+                        {/* MARCADOR JUGADOR 1 */}
+                        {(partido.estado_partido === 'Finalizado' || partido.estado === 'Finalizado') && (
+                          <span className="font-bold text-foreground ml-2">
+                            {partido.sets_jugador1 ?? partido.resultado?.sets_jugador1 ?? '-'}
+                          </span>
+                        )}
                       </div>
 
                       <div className="border-t border-border/50"></div>
 
                       {/* Participante 2 */}
                       <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
-                        <span className="font-medium text-foreground">
+                        <span className="font-medium text-foreground flex items-center">
                           {partido.username_j2 ? (
                             <>
                               {partido.siembra_j2 && (
@@ -132,6 +139,13 @@ export default function TournamentResults({ matches, tournamentId }) {
                             "Bye / Por definir"
                           )}
                         </span>
+
+                        {/* MARCADOR JUGADOR 2 */}
+                        {(partido.estado_partido === 'Finalizado' || partido.estado === 'Finalizado') && (
+                          <span className="font-bold text-foreground ml-2">
+                            {partido.sets_jugador2 ?? partido.resultado?.sets_jugador2 ?? '-'}
+                          </span>
+                        )}
                       </div>
 
                       {/* Estado y Botón de Registro */}
