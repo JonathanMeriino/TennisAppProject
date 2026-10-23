@@ -169,6 +169,14 @@ class InscripcionesSerializer(serializers.ModelSerializer):
 
         return data
 
+
+
+class ResultadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Resultado
+        fields = '__all__'
+
+
 #Serializer Partido
 class PartidoSerializer(serializers.ModelSerializer):
     username_j1 = serializers.CharField(source='jugador1.jugador.username', read_only=True)
@@ -176,15 +184,10 @@ class PartidoSerializer(serializers.ModelSerializer):
 
     username_j2 = serializers.CharField(source='jugador2.jugador.username', read_only=True)
     siembra_j2 = serializers.IntegerField(source='jugador2.numero_siembra', read_only=True)
-    
+
+    resultado=ResultadoSerializer(read_only=True)
     username_ganador = serializers.CharField(source='ganador.jugador.user.username', read_only=True, allow_null=True)
     class Meta:
         model = Partido
         fields = '__all__'
-
-class ResultadoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Resultado
-        fields = '__all__'
-
     
