@@ -3,27 +3,14 @@
 //
 // Configura la URL de tu backend con la variable de entorno NEXT_PUBLIC_API_URL
 // (ver .env.local). Por defecto usa http://localhost:8000.
-//
-// ENDPOINTS ESPERADOS (rutas REST estándar que asume el frontend):
-//   POST   /api/auth/register           -> { token, user }
-//   POST   /api/auth/login              -> { token, user }
-//   GET    /api/auth/me                 -> user
-//   PUT    /api/auth/me                 -> user
-//   GET    /api/tournaments             -> [ tournament, ... ]
-//   POST   /api/tournaments             -> tournament        (multipart/form-data con Excel)
-//   POST   /api/tournaments/join        -> { id }            body: { code }
-//   GET    /api/tournaments/:id         -> tournament
-//   GET    /api/tournaments/:id/groups  -> [ group, ... ]
-//   GET    /api/tournaments/:id/matches -> [ match, ... ]
-//   POST   /api/tournaments/:id/matches/:matchId/result -> match
-//
+
 // Ajusta las rutas de abajo si tu backend usa otras.
 // ---------------------------------------------------------------------------
 
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL;
 
-const TOKEN_KEY = "tournify_token";
+const TOKEN_KEY = "access_token";
 
 // --- Manejo del token JWT --------------------------------------------------
 
@@ -62,7 +49,7 @@ async function request(url, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`http://localhost:8000${url}`, {
+  const response = await fetch(`${API_URL}${url}`, {
     cache: "no-store",
     ...options,
     headers,
