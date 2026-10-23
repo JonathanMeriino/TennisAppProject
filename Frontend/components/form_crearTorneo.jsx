@@ -17,6 +17,7 @@ export function CreateTournamentForm() {
     rama_torneo: "Varonil",
     estado:"Programado",
     canchas_disponibles: 2,
+    descripcion_torneo: "", 
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -166,7 +167,18 @@ export function CreateTournamentForm() {
             Número de canchas habilitadas simultáneamente para este torneo.
           </p>
         </div>
-
+        {/* Descripcion del torneo */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Descripción del Torneo (Opcional)
+          </label>
+          <textarea
+            value={formData.descripcion}
+            onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+            className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground resize-none h-24"
+            placeholder="Ej: Torneo de fin de semana con formato de eliminación directa..."
+          />
+        </div>
         {/* Botones de accion*/}
         <div className="flex gap-3 pt-6">
           <Link href="/dashboard" className="btn-outline flex-1 text-center">
