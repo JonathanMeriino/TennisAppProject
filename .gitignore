@@ -1,3 +1,5 @@
 Backend/myapp/migrations/
 Backend/myapp/__pycache__/
 Backend/tenis_app/__pycache__/
+
+Backend/.env
