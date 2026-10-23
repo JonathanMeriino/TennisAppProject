@@ -118,6 +118,18 @@ export default function ModalEdicion({
               required
             />
           </div>
+          {/* Campo de Descripción */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Descripción del Torneo (Opcional)
+            </label>
+            <textarea
+              value={editForm.descripcion || ''}
+              onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
+              className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground resize-none h-24"
+              placeholder="Escribe detalles del torneo..."
+            />
+          </div>
 
           {/* Botones de Acción */}
           <div className="flex justify-end gap-3 pt-3 border-t border-border">
