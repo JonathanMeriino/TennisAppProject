@@ -23,7 +23,15 @@ export default function TorneoDetalles({
             Eliminación Directa
           </span>
           <h1 className="text-2xl font-bold text-foreground mt-2">{tournament.nombre_torneo}</h1>
+          {/* DESCRIPCIÓN DEL TORNEO */}
+          {tournament.descripcion_torneo && (
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl leading-relaxed">
+              {tournament.descripcion_torneo}
+            </p>
+          )}
         </div>
+        
+      
 
         <div className="flex items-center gap-3">
           <span className="text-xs bg-muted text-muted-foreground font-medium px-3 py-1.5 rounded-full">
