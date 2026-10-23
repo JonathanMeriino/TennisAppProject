@@ -1,0 +1,33 @@
+absl-py==2.5.1
+asgiref @ file:///home/task_176034212838487/conda-bld/asgiref_1760342140083/work
+attrs @ file:///home/task_176235647440041/conda-bld/attrs_1762356877723/work
+certifi @ file:///home/task_176765899978398/croot/certifi_1767659142032/work/certifi
+Django @ file:///home/task_176051900486275/conda-bld/django_1760519130812/work
+django-cors-headers @ file:///home/conda/feedstock_root/build_artifacts/django-cors-headers_1758205387979/work
+djangorestframework @ file:///home/conda/feedstock_root/build_artifacts/djangorestframework_1754514405054/work
+djangorestframework_simplejwt @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_djangorestframework_simplejwt_1742472987/work
+drf-spectacular @ file:///home/conda/feedstock_root/build_artifacts/drf-spectacular_1762057159377/work
+immutabledict==4.3.1
+inflection @ file:///work/perseverance-python-buildout/croot/inflection_1698869084799/work
+jsonschema @ file:///home/task_176795535029166/croot/jsonschema_1767955382808/work
+jsonschema-specifications @ file:///home/task_176278841581006/conda-bld/jsonschema-specifications_1762788429133/work
+numpy==2.5.4
+ortools==9.15.6755
+pandas==3.0.6
+protobuf==6.33.6
+psycopg2 @ file:///croot/psycopg2_1744919787325/work
+psycopg2-binary @ file:///home/conda/feedstock_root/build_artifacts/psycopg2-split_1750255432256/work/psycopg2-binary
+PyJWT @ file:///croot/pyjwt_1730786791730/work
+python-dateutil==3.0.0
+python-dotenv==1.2.4
+PyYAML @ file:///home/task_176346544403961/conda-bld/pyyaml_1763465494824/work
+referencing @ file:///home/task_176253675477096/conda-bld/referencing_1762536887597/work
+rpds-py @ file:///home/task_176236637726140/conda-bld/rpds-py_1762366483045/work
+setuptools==80.9.0
+six==1.17.0
+sqlparse @ file:///croot/sqlparse_1734704446487/work
+typing_extensions @ file:///croot/typing_extensions_1756280817316/work
+tzdata==2026.5
+uritemplate @ file:///home/conda/feedstock_root/build_artifacts/uritemplate_1748892307961/work
+wheel==0.45.1
+whitenoise==6.12.0
