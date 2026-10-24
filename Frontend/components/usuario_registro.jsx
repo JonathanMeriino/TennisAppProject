@@ -50,7 +50,7 @@ export function RegistroForm() {
     setIsLoading(true);
 
     try {
-      const respuesta = await fetch("http://localhost:8000/api/usuario/", { // Cambiamos el nombre o usamos 'res'
+      const respuesta = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/usuario/`, { 
         method: "POST",
         headers: {
           "Content-Type": "application/json",
