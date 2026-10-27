@@ -24,4 +24,5 @@ urlpatterns = [
         "put": "put",
         "patch": "put"
     }), name='get_user'),
+    path('auth/reset-password/', views.password_reset_simple, name='reset_password'),
 ]
