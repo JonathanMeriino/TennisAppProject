@@ -1,6 +1,8 @@
 import json
 import math
 import datetime
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -510,3 +512,20 @@ class ResultadoViewSet(viewsets.ModelViewSet):
             if torneo:
                 torneo.estado_torneo = 'Finalizado'
                 torneo.save()
+
+# =========================================================================
+# VISTA DE RECUPERACIÓN DE CONTRASEÑA SIMPLIFICADA
+# =========================================================================
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def password_reset_simple(request):
+    email = request.data.get('email')
+    new_password = request.data.get('new_password')
+    
+    try:
+        user = User.objects.get(email=email)
+        user.set_password(new_password)  # Encripta correctamente la contraseña para Django
+        user.save()
+        return Response({"detail": "Contraseña actualizada con éxito."}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "No existe un usuario con este correo."}, status=status.HTTP_404_NOT_FOUND)
