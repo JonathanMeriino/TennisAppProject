@@ -3,54 +3,41 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/api';
+import { toast } from 'sonner'; // O la librería de toast que utilices en tu proyecto (ej. react-hot-toast o sonner)
 
-export default function RecuperarPasswordDirectaPage() {
+export default function RecuperarPasswordPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMensaje('');
-    setError('');
 
-    // Validación rápida en frontend de que las contraseñas coincidan
+    // Validar que las contraseñas coincidan antes de mandar la petición
     if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden.');
-      setLoading(false);
+      toast.error('Las contraseñas no coinciden.');
       return;
     }
 
+    setLoading(true);
+
     try {
-      // Petición POST hacia tu backend en Django
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/password-reset-directo/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username,
-          new_password: newPassword,
-        }),
-      });
+      // Usamos el método limpio centralizado en tu api.js
+      await auth.resetPassword(email, newPassword);
 
-      const data = await response.json();
+      toast.success('¡Contraseña actualizada con éxito!');
+      
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
 
-      if (response.ok) {
-        setMensaje('¡Contraseña actualizada con éxito! Redirigiendo al login...');
-        setTimeout(() => {
-          router.push('/');
-        }, 2000);
-      } else {
-        setError(data.error || 'Ocurrió un error al actualizar la contraseña.');
-      }
     } catch (err) {
-      setError('Error de conexión con el servidor.');
+      // Manejo de errores dinámico usando Toast
+      const errorMsg = err.error || err.detail || 'No se pudo actualizar la contraseña. Verifica tu correo.';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -63,33 +50,21 @@ export default function RecuperarPasswordDirectaPage() {
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Restablecer Contraseña</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Ingresa tu usuario y define tu nueva contraseña.
+            Ingresa tu correo y define tu nueva contraseña.
           </p>
         </div>
-
-        {mensaje && (
-          <div className="mb-4 rounded-lg bg-green-500/10 p-3 text-sm text-green-600 border border-green-500/20 text-center font-medium">
-            {mensaje}
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-500/10 p-3 text-sm text-red-600 border border-red-500/20 text-center">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Nombre de Usuario
+              Correo Electrónico
             </label>
             <input
-              type="text"
+              type="email"
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Tu usuario"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu.correo@ipn.mx"
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -127,7 +102,7 @@ export default function RecuperarPasswordDirectaPage() {
             disabled={loading}
             className="w-full rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? 'Actualizando...' : 'Cambiar Contraseña'}
+            {loading ? 'Actualizando...' : 'Actualizar contraseña'}
           </button>
         </form>
 
