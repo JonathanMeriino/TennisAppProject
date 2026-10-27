@@ -87,6 +87,12 @@ export const auth = {
     }
     return result;
   },
+  async resetPassword(email, newPassword) {
+    return request("/api/auth/reset-password/", {
+      method: "POST",
+      body: JSON.stringify({ email, new_password: newPassword }),
+    });
+  },
 
   async me() {
     return request("/api/auth/me");
