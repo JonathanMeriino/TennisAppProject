@@ -1,12 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import { auth } from "@/lib/api";
 import TournamentSchedule from '@/components/torneos_calendario';
 import ModalResultados from '@/components/modal_resultados'; // Asegúrate de apuntar a la ruta correcta
 
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
-  
+  const [currentUser, setCurrentUser] = useState(null);
   const fasesDisponibles = Array.from(new Set(matches.map(m => m.fase)));
   const ordenFases = {
     "Ronda de 64": 1,
@@ -16,7 +18,11 @@ export default function TournamentResults({ matches, tournamentId }) {
     "Semifinal": 5,
     "Final": 6
   };
-
+  useEffect(() => {
+    auth.me()
+      .then((data) => setCurrentUser(data.username))
+      .catch(() => console.log("Usuario no autenticado"));
+  }, []);
   const fasesOrdenadas = fasesDisponibles.sort((a, b) => (ordenFases[a] || 0) - (ordenFases[b] || 0));
   const partidoFinal = matches.find((m) => m.fase?.toLowerCase() === "final");
   let nombreCampeon = null;
@@ -90,8 +96,8 @@ export default function TournamentResults({ matches, tournamentId }) {
                       className="border border-border rounded-lg p-3 bg-card shadow-sm space-y-2 text-xs min-h-[135px] flex flex-col justify-between"
                     >
                       {/* Jugador 1 */}
-                      <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j1 ? 'bg-background' : 'text-muted-foreground italic'}`}>
-                        <span className="font-medium text-foreground flex items-center">
+                      <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j1 ? (currentUser === partido.username_j1 ? 'bg-primary/10 border border-primary/30' : 'bg-background') : 'text-muted-foreground italic'}`}>
+                        <span className={`flex items-center ${currentUser === partido.username_j1 ? 'font-extrabold text-primary' : 'font-medium text-foreground'}`}>
                           {partido.username_j1 ? (
                             <>
                               {partido.siembra_j1 && (
@@ -99,7 +105,7 @@ export default function TournamentResults({ matches, tournamentId }) {
                                   [{partido.siembra_j1}]
                                 </span>
                               )}
-                              {partido.username_j1}
+                              {partido.username_j1} {currentUser === partido.username_j1 && "(Tú)"}
                             </>
                           ) : (
                             "Bye / Por definir"
@@ -125,8 +131,8 @@ export default function TournamentResults({ matches, tournamentId }) {
                       <div className="border-t border-border/50"></div>
 
                       {/* Participante 2 */}
-                      <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j2 ? 'bg-background' : 'text-muted-foreground italic'}`}>
-                        <span className="font-medium text-foreground flex items-center">
+                      <div className={`p-1.5 rounded flex items-center justify-between ${partido.username_j2 ? (currentUser === partido.username_j2 ? 'bg-primary/10 border border-primary/30' : 'bg-background') : 'text-muted-foreground italic'}`}>
+                        <span className={`flex items-center ${currentUser === partido.username_j2 ? 'font-extrabold text-primary' : 'font-medium text-foreground'}`}>
                           {partido.username_j2 ? (
                             <>
                               {partido.siembra_j2 && (
@@ -134,7 +140,7 @@ export default function TournamentResults({ matches, tournamentId }) {
                                   [{partido.siembra_j2}]
                                 </span>
                               )}
-                              {partido.username_j2}
+                              {partido.username_j2} {currentUser === partido.username_j2 && "(Tú)"}
                             </>
                           ) : (
                             "Bye / Por definir"

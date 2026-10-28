@@ -1,32 +1,39 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
+import { auth } from '@/lib/api'; // Importamos la API para obtener al usuario
 
 export default function TournamentGridSchedule({ matches }) {
-  // 1. Estado para rastrear la fecha base de la semana actual que estamos viendo
   const [fechaBase, setFechaBase] = useState(new Date());
+  const [currentUser, setCurrentUser] = useState(null); // Estado para el usuario actual
 
-  // Al cargar el componente, si hay partidos, centramos el calendario en la fecha del primer partido
+  // 1. Obtener al usuario autenticado al montar el componente
+  useEffect(() => {
+    auth.me()
+      .then((data) => setCurrentUser(data.username))
+      .catch(() => console.log("Usuario no autenticado en el calendario"));
+  }, []);
+
+  // 2. Centrar el calendario en el primer partido disponible
   useEffect(() => {
     if (matches && matches.length > 0) {
-      // Buscamos el primer partido que tenga fecha asignada
       const primerPartido = matches.find(m => m.fecha);
       if (primerPartido) {
-        // Añadimos T12:00:00 para evitar desfasajes por zonas horarias al crear el objeto Date
         setFechaBase(new Date(`${primerPartido.fecha}T12:00:00`));
       }
     }
   }, [matches]);
 
-  // 2. Lógica para obtener el Lunes de la semana actual
+  // 3. Lógica de fechas
   const obtenerLunes = (fecha) => {
     const d = new Date(fecha);
     const dia = d.getDay();
-    const diferencia = d.getDate() - dia + (dia === 0 ? -6 : 1); // Ajuste si es domingo
+    const diferencia = d.getDate() - dia + (dia === 0 ? -6 : 1);
     return new Date(d.setDate(diferencia));
   };
 
   const lunesDeLaSemana = obtenerLunes(fechaBase);
 
-  // 3. Generar el arreglo con los 7 días (objetos Date) de la semana actual
   const diasDeLaSemana = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(lunesDeLaSemana);
     d.setDate(lunesDeLaSemana.getDate() + i);
@@ -48,7 +55,6 @@ export default function TournamentGridSchedule({ matches }) {
 
   const irAHoy = () => setFechaBase(new Date());
 
-  // Formateador para comparar con la base de datos (YYYY-MM-DD)
   const formatearFechaBD = (date) => {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -65,8 +71,6 @@ export default function TournamentGridSchedule({ matches }) {
   ];
 
   const nombresDias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-
-  // Para mostrar el mes y año en el título
   const mesActual = lunesDeLaSemana.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
 
   return (
@@ -84,7 +88,6 @@ export default function TournamentGridSchedule({ matches }) {
             </h3>
           </div>
 
-          {/* Controles de Semana */}
           <div className="flex items-center gap-2">
             <button 
               onClick={semanaAnterior}
@@ -139,7 +142,6 @@ export default function TournamentGridSchedule({ matches }) {
                   {diasDeLaSemana.map((fechaDia, index) => {
                     const fechaStr = formatearFechaBD(fechaDia);
                     
-                    // Filtrado exacto: Coincide la fecha exacta (YYYY-MM-DD) y el bloque horario
                     const partidosEnBloque = matches.filter((m) => {
                       const horaPartido = m.hora ? m.hora.slice(0, 5) : "";
                       return m.fecha === fechaStr && horaPartido === horaInicioBloque;
@@ -152,29 +154,46 @@ export default function TournamentGridSchedule({ matches }) {
                             Libre
                           </div>
                         ) : (
-                          <div className="space-y-2 flex flex-col h-full justify-start overflow-y-auto max-h-32">
-                            {partidosEnBloque.map((partido) => (
-                              <div 
-                                key={partido.id || partido.id_partido}
-                                className="bg-background border border-border/70 rounded-md p-2 shadow-xs text-[11px] space-y-1 hover:border-primary/50 transition-all"
-                              >
-                                <div className="font-bold text-primary truncate text-[10px] uppercase tracking-wide">
-                                  {partido.fase}
-                                </div>
-                                <div className="text-foreground font-medium truncate leading-tight">
-                                  <div>
-                                    {partido.siembra_j1 && <span className="text-primary font-bold mr-1">[{partido.siembra_j1}]</span>}
-                                    {partido.username_j1 || "Por definir"}
+                          <div className="space-y-2 flex flex-col h-full justify-start overflow-y-auto max-h-32 pr-1">
+                            {partidosEnBloque.map((partido) => {
+                              // Verificamos si el usuario actual juega este partido
+                              const esMiPartido = currentUser && (partido.username_j1 === currentUser || partido.username_j2 === currentUser);
+
+                              return (
+                                <div 
+                                  key={partido.id || partido.id_partido}
+                                  // Resaltamos toda la tarjeta si es el partido del usuario
+                                  className={`border rounded-md p-2 shadow-xs text-[11px] space-y-1 transition-all ${
+                                    esMiPartido 
+                                      ? 'bg-primary/10 border-primary/50' 
+                                      : 'bg-background border-border/70 hover:border-primary/50'
+                                  }`}
+                                >
+                                  <div className="font-bold text-primary truncate text-[10px] uppercase tracking-wide">
+                                    {partido.fase}
                                   </div>
-                                  <div className="text-[9px] text-muted-foreground font-bold my-0.5 text-center">VS</div>
-                                  <div>
-                                    {partido.siembra_j2 && <span className="text-primary font-bold mr-1">[{partido.siembra_j2}]</span>}
-                                    {partido.username_j2 || "Por definir"}
+                                  <div className="text-foreground font-medium truncate leading-tight">
+                                    
+                                    {/* Jugador 1 */}
+                                    <div className={partido.username_j1 === currentUser ? "text-primary font-extrabold" : ""}>
+                                      {partido.siembra_j1 && <span className="text-primary font-bold mr-1">[{partido.siembra_j1}]</span>}
+                                      {partido.username_j1 || "Por definir"} 
+                                      {partido.username_j1 === currentUser && " (Tú)"}
+                                    </div>
+                                    
+                                    <div className="text-[9px] text-muted-foreground font-bold my-0.5 text-center">VS</div>
+                                    
+                                    {/* Jugador 2 */}
+                                    <div className={partido.username_j2 === currentUser ? "text-primary font-extrabold" : ""}>
+                                      {partido.siembra_j2 && <span className="text-primary font-bold mr-1">[{partido.siembra_j2}]</span>}
+                                      {partido.username_j2 || "Por definir"} 
+                                      {partido.username_j2 === currentUser && " (Tú)"}
+                                    </div>
+
                                   </div>
                                 </div>
-                                
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </td>
