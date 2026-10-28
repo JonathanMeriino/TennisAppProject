@@ -151,6 +151,7 @@ export function RegistroForm() {
               type="text"
               name="boleta"
               placeholder="Ej. 2026630000"
+              maxLength={10}
               value={formData.boleta}
               onChange={handleChange}
               className="input-field w-full"
@@ -246,9 +247,10 @@ export function RegistroForm() {
               Escuela de procedencia
             </label>
             <select
-              id="escuela_usuario"
-              value={formData.escuela_usuario}
-              onChange={(e) => handleSelectChange("escuela_usuario", e.target.value)}
+              id="escuela"
+              name="escuela"
+              value={formData.escuela}
+              onChange={(e) => handleSelectChange("escuela", e.target.value)}
               className="input-field w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               required
             >
