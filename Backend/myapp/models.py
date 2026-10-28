@@ -127,8 +127,12 @@ class Resultado(models.Model):
     # OneToOneField porque un partido solo tiene UN resultado oficial
     partido = models.OneToOneField(Partido, on_delete=models.CASCADE, related_name='resultado')
     
-    sets_jugador1 = models.PositiveIntegerField(default=0)
-    sets_jugador2 = models.PositiveIntegerField(default=0)
+    set1_jugador1 = models.PositiveIntegerField(default=0)
+    set1_jugador2 = models.PositiveIntegerField(default=0)
+    set2_jugador1 = models.PositiveIntegerField(default=0)
+    set2_jugador2 = models.PositiveIntegerField(default=0)
+    set3_jugador1 = models.PositiveIntegerField(default=0)
+    set3_jugador2 = models.PositiveIntegerField(default=0)
     
     # El ganador apunta directamente a la Inscripcion
     ganador = models.ForeignKey(Inscripcion, on_delete=models.SET_NULL, null=True, blank=True, related_name='partidos_ganados')
