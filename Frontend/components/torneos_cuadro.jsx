@@ -1,14 +1,13 @@
 "use client";
 import React, { useState } from "react";
-import { toast } from "react-hot-toast";
-import { tournaments } from "@/lib/api";
-import TournamentSchedule from '@/components/torneos_calendario'; // Ajusta la ruta según tu proyecto
+import TournamentSchedule from '@/components/torneos_calendario';
+import ModalResultados from '@/components/modal_resultados'; // Asegúrate de apuntar a la ruta correcta
 
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
-  const fasesDisponibles = Array.from(new Set(matches.map(m => m.fase)));
   
+  const fasesDisponibles = Array.from(new Set(matches.map(m => m.fase)));
   const ordenFases = {
     "Ronda de 64": 1,
     "Ronda de 32": 2,
@@ -18,10 +17,7 @@ export default function TournamentResults({ matches, tournamentId }) {
     "Final": 6
   };
 
-  // Ordenamos el arreglo extraído
   const fasesOrdenadas = fasesDisponibles.sort((a, b) => (ordenFases[a] || 0) - (ordenFases[b] || 0));
-  // Lógica para detectar al Campeón una vez concluida la Final
-  // Lógica flexible para detectar al Campeón
   const partidoFinal = matches.find((m) => m.fase?.toLowerCase() === "final");
   let nombreCampeon = null;
 
@@ -46,16 +42,13 @@ export default function TournamentResults({ matches, tournamentId }) {
     } else if (winnerId && winnerId === j2Id) {
       nombreCampeon = partidoFinal.username_j2;
     } else if (partidoFinal.estado === "Finalizado") {
-      // Si el partido está finalizado pero la API no mandó el ID del ganador explícito, 
-      // puedes evaluar el último resultado o tomar por defecto el nombre del jugador 1 o 2 
-      // según el marcador que tengas guardado en tu base de datos.
-      nombreCampeon = partidoFinal.username_j1; // O el ganador que corresponda según tu API
+      nombreCampeon = partidoFinal.username_j1; 
     }
   }
 
   return (
     <div className="card-base p-6 space-y-4">
-      {/* SECCIÓN/BANNER DEL CAMPEÓN (Aparece automáticamente cuando hay ganador en la final) */}
+      {/* SECCIÓN/BANNER DEL CAMPEÓN */}
       {nombreCampeon && (
         <div className="bg-gradient-to-r from-yellow-500/10 via-amber-500/20 to-yellow-500/10 border border-yellow-500/40 rounded-xl p-6 text-center space-y-2 shadow-md">
           <span className="text-4xl block">🏆</span>
@@ -115,10 +108,18 @@ export default function TournamentResults({ matches, tournamentId }) {
 
                         {/* MARCADOR JUGADOR 1 */}
                         {(partido.estado_partido === 'Finalizado' || partido.estado === 'Finalizado') && (
-                          <span className="font-bold text-foreground ml-2">
-                            {partido.sets_jugador1 ?? partido.resultado?.sets_jugador1 ?? '-'}
-                          </span>
-                        )}
+                        <span className="font-bold text-foreground ml-2 flex gap-1.5">
+                          {partido.resultado ? (
+                            <>
+                              <span>{partido.resultado.set1_jugador1}</span>
+                              <span>{partido.resultado.set2_jugador1}</span>
+                              {(partido.resultado.set3_jugador1 > 0 || partido.resultado.set3_jugador2 > 0) && (
+                                <span>{partido.resultado.set3_jugador1}</span>
+                              )}
+                            </>
+                          ) : '-'}
+                        </span>
+                      )}
                       </div>
 
                       <div className="border-t border-border/50"></div>
@@ -142,10 +143,18 @@ export default function TournamentResults({ matches, tournamentId }) {
 
                         {/* MARCADOR JUGADOR 2 */}
                         {(partido.estado_partido === 'Finalizado' || partido.estado === 'Finalizado') && (
-                          <span className="font-bold text-foreground ml-2">
-                            {partido.sets_jugador2 ?? partido.resultado?.sets_jugador2 ?? '-'}
-                          </span>
-                        )}
+                        <span className="font-bold text-foreground ml-2 flex gap-1.5">
+                          {partido.resultado ? (
+                            <>
+                              <span>{partido.resultado.set1_jugador2}</span>
+                              <span>{partido.resultado.set2_jugador2}</span>
+                              {(partido.resultado.set3_jugador1 > 0 || partido.resultado.set3_jugador2 > 0) && (
+                                <span>{partido.resultado.set3_jugador2}</span>
+                              )}
+                            </>
+                          ) : '-'}
+                        </span>
+                      )}
                       </div>
 
                       {/* Estado y Botón de Registro */}
@@ -175,126 +184,14 @@ export default function TournamentResults({ matches, tournamentId }) {
         </div>
       )}
 
-      {/* MODAL PARA REGISTRAR RESULTADO Y SELECCIONAR GANADOR */}
-      {isResultModalOpen && selectedMatch && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="card-base bg-card p-6 max-w-sm w-full space-y-4">
-            <div>
-              <h3 className="text-lg font-bold text-foreground">Registrar Marcador</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Ingresa los sets y selecciona al ganador</p>
-            </div>
-            
-            <div className="space-y-3 text-sm">
-              {/* Sets Jugador 1 */}
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-foreground truncate max-w-[160px]">
-                  {selectedMatch.username_j1}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  id="setsJ1"
-                  className="input-field w-16 text-center py-1 text-sm"
-                  defaultValue="0"
-                />
-              </div>
-
-              {/* Sets Jugador 2 */}
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-foreground truncate max-w-[160px]">
-                  {selectedMatch.username_j2}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  id="setsJ2"
-                  className="input-field w-16 text-center py-1 text-sm"
-                  defaultValue="0"
-                />
-              </div>
-
-              {/* APARTADO PARA SELECCIONAR AL GANADOR */}
-              <div className="pt-2 border-t border-border/50 space-y-1.5">
-                <label className="text-xs font-semibold text-foreground block">
-                  Ganador del Partido
-                </label>
-                <select
-                  id="selectGanador"
-                  className="input-field w-full py-1.5 px-3 text-sm rounded-lg border border-border bg-card text-foreground"
-                >
-                  <option value="">-- Selecciona un ganador --</option>
-                  <option value={typeof selectedMatch.jugador1 === 'object' ? selectedMatch.jugador1?.id_inscripcion || selectedMatch.jugador1?.id : selectedMatch.jugador1}>
-                    {selectedMatch.username_j1}
-                  </option>
-                  <option value={typeof selectedMatch.jugador2 === 'object' ? selectedMatch.jugador2?.id_inscripcion || selectedMatch.jugador2?.id : selectedMatch.jugador2}>
-                    {selectedMatch.username_j2}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsResultModalOpen(false)}
-                className="btn-outline flex-1 text-xs py-2"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const sets1 = document.getElementById("setsJ1").value;
-                  const sets2 = document.getElementById("setsJ2").value;
-                  const winnerId = document.getElementById("selectGanador").value;
-
-                  const payload = {
-                    partido: selectedMatch.id || selectedMatch.id_partido,
-                    sets_jugador1: parseInt(sets1) || 0,
-                    sets_jugador2: parseInt(sets2) || 0,
-                    ganador: parseInt(winnerId)
-                  };
-                  console.log("Datos convertidos a enviar:", payload);
-                  if (!winnerId) {
-                    toast.error("Por favor selecciona un ganador.");
-                    return;
-                  }
-
-                  const loadingToast = toast.loading("Guardando resultado...");
-                  try {
-                    await tournaments.reportResult(
-                      payload.partido, 
-                      payload.sets_jugador1, 
-                      payload.sets_jugador2, 
-                      payload.ganador
-                    );
-                    
-
-                    toast.dismiss(loadingToast);
-                    toast.success("¡Resultado registrado y ganador avanzado!");
-                    setIsResultModalOpen(false);
-                    window.location.reload();
-                  } catch (err) {
-                    toast.dismiss(loadingToast);
-                  
-                    const serverMsg = err.response?.data || err.detail || err.error || JSON.stringify(err);
-                    toast.error(typeof serverMsg === 'object' ? JSON.stringify(serverMsg) : serverMsg);
-                  }
-                }}
-                className="btn-primary flex-1 text-xs py-2"
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* COMPONENTE MODAL AISLADO */}
+      <ModalResultados 
+        isOpen={isResultModalOpen} 
+        onClose={() => setIsResultModalOpen(false)} 
+        selectedMatch={selectedMatch} 
+      />
       
-      
-
-    {/* Agregas el nuevo componente */}
-    <TournamentSchedule matches={matches} />
-      
+      <TournamentSchedule matches={matches} />
     </div>
   );
 }
