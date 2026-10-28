@@ -171,13 +171,17 @@ export const tournaments = {
     return request(`/api/torneo/${id}/matches`);
   },
 
-  async reportResult(partidoId, setsJ1, setsJ2, ganadorInscripcionId) {
+  async reportResult(partidoId, setsData, ganadorInscripcionId) {
     return request ('/api/resultados/', {
       method: 'POST',
       body: JSON.stringify({
         partido: partidoId,
-        sets_jugador1: parseInt(setsJ1),
-        sets_jugador2: parseInt(setsJ2),
+        set1_jugador1: parseInt(setsData.set1_j1) || 0,
+        set1_jugador2: parseInt(setsData.set1_j2) || 0,
+        set2_jugador1: parseInt(setsData.set2_j1) || 0,
+        set2_jugador2: parseInt(setsData.set2_j2) || 0,
+        set3_jugador1: parseInt(setsData.set3_j1) || 0,
+        set3_jugador2: parseInt(setsData.set3_j2) || 0,
         ganador: ganadorInscripcionId,
       }),
     });
