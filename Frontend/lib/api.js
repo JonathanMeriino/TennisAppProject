@@ -88,18 +88,18 @@ export const auth = {
     return result;
   },
   async resetPassword(email, newPassword) {
-    return request("/api/auth/reset-password/", {
+    return request("/api/usuario/reset-password/", {
       method: "POST",
       body: JSON.stringify({ email, new_password: newPassword }),
     });
   },
 
   async me() {
-    return request("/api/auth/me");
+    return request("/api/usuario/me");
   },
 
   async updateProfile(data) {
-    return request("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
+    return request("/api/usuario/me", { method: "PATCH", body: JSON.stringify(data) });
   },
 
   logout() {
@@ -189,5 +189,12 @@ export const tournaments = {
 
   async myTournaments() {
     return request("/api/torneo/mis_inscripciones/");
+  },
+  // Deshacer resultado de un partido
+  async undoResult(partidoId) {
+    return request(`/api/resultados/deshacer/`, {
+      method: "POST",
+      body: JSON.stringify({ partido: partidoId }),
+    });
   },
 };
