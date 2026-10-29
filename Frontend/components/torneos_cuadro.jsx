@@ -4,11 +4,12 @@ import { toast } from "react-hot-toast";
 import { auth } from "@/lib/api";
 import TournamentSchedule from '@/components/torneos_calendario';
 import ModalResultados from '@/components/modal_resultados'; // Asegúrate de apuntar a la ruta correcta
-
+import { tournaments } from "@/lib/api";
 export default function TournamentResults({ matches, tournamentId }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const fasesDisponibles = Array.from(new Set(matches.map(m => m.fase)));
   const ordenFases = {
     "Ronda de 64": 1,
@@ -20,9 +21,36 @@ export default function TournamentResults({ matches, tournamentId }) {
   };
   useEffect(() => {
     auth.me()
-      .then((data) => setCurrentUser(data.username))
+      .then((data) => {
+        setCurrentUser(data.username);
+        
+        // Validación ajustada a la estructura de tu JSON
+        if (data.perfil?.rol === "Administrador") {
+          setIsAdmin(true); 
+        }
+      })
       .catch(() => console.log("Usuario no autenticado"));
   }, []);
+  const handleDeshacerResultado = async (partidoId) => {
+    console.log("Intentando deshacer resultado para el partido ID:", partidoId);
+
+    if (!partidoId) {
+      toast.error("No se pudo obtener el ID del partido.");
+      return;
+    }
+
+    const confirmacion = confirm("¿Estás seguro de que deseas deshacer este resultado? El partido volverá a estar 'Programado' y se revertirá el avance.");
+    if (!confirmacion) return;
+
+    try {
+      await tournaments.undoResult(partidoId);
+      toast.success("¡Resultado deshecho con éxito!");
+      window.location.reload(); 
+    } catch (err) {
+      console.error("Error al deshacer resultado:", err);
+      toast.error(err.error || err.detail || "Error al deshacer el resultado.");
+    }
+  };
   const fasesOrdenadas = fasesDisponibles.sort((a, b) => (ordenFases[a] || 0) - (ordenFases[b] || 0));
   const partidoFinal = matches.find((m) => m.fase?.toLowerCase() === "final");
   let nombreCampeon = null;
@@ -169,7 +197,10 @@ export default function TournamentResults({ matches, tournamentId }) {
                           Estado: <span className="text-foreground">{partido.estado || "Pendiente"}</span>
                         </span>
 
-                        {partido.estado !== "Finalizado" && partido.username_j1 && partido.username_j2 && (
+                        {partido.estado !== "Finalizado" && 
+                        partido.username_j1 && 
+                        partido.username_j2 && 
+                        (isAdmin || partido.username_j1 === currentUser || partido.username_j2 === currentUser) && (
                           <button
                             onClick={() => {
                               setSelectedMatch(partido);
@@ -178,6 +209,19 @@ export default function TournamentResults({ matches, tournamentId }) {
                             className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 px-2 py-1 rounded transition-colors font-medium"
                           >
                             Registrar Resultado
+                          </button>
+                        )}
+                        {/* Botón para deshacer (Solo Admin y solo si ya finalizó) */}
+                        {partido.estado === "Finalizado" && isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const idPartido = partido.id_partido || partido.id;
+                              handleDeshacerResultado(idPartido);
+                            }}
+                            className="text-[10px] bg-red-500/10 text-red-600 hover:bg-red-500/20 px-2 py-1 rounded transition-colors font-medium cursor-pointer"
+                          >
+                            Deshacer
                           </button>
                         )}
                       </div>

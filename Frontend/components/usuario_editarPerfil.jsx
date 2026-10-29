@@ -20,7 +20,6 @@ export function EditProfileForm() {
     escuela: "",
   });
 
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -29,14 +28,14 @@ export function EditProfileForm() {
     auth
       .me()
       .then((user) => {
-        // Extraemos de forma segura tanto si vienen planos como dentro de 'perfil'
         const perfilData = user.perfil || {};
         
-        const sexoVal = user.genero || user.sexo || perfilData.sexo_usuario || "";
-        const edadVal = user.edad !== undefined ? user.edad : perfilData.edad_usuario;
-        const categoriaVal = user.categoria !== undefined ? user.categoria : perfilData.categoria;
-        const boletaVal = perfilData.boleta_usuario || "";
-        const escuelaVal = perfilData.escuela_usuario || perfilData.escuela || "";
+        // Leemos priorizando los nuevos nombres limpios, respaldados por los anteriores
+        const sexoVal = user.sexo || perfilData.sexo || perfilData.sexo_usuario || "";
+        const edadVal = perfilData.edad !== undefined ? perfilData.edad : perfilData.edad_usuario;
+        const categoriaVal = perfilData.categoria !== undefined ? perfilData.categoria : perfilData.categoria_nombre;
+        const boletaVal = perfilData.boleta || perfilData.boleta_usuario || "";
+        const escuelaVal = perfilData.escuela || perfilData.escuela_usuario || "";
 
         setFormData({
           nombres: user.first_name || "",
@@ -75,6 +74,7 @@ export function EditProfileForm() {
     setIsLoading(true);
 
     try {
+      // Enviamos tanto las claves limpias como las con sufijo _usuario para asegurar compatibilidad total
       const payload = {
         first_name: formData.nombres,
         last_name: formData.apellidos,
@@ -82,9 +82,12 @@ export function EditProfileForm() {
         email: formData.email,
         sexo: formData.sexo,
         edad: Number.parseInt(formData.edad),
+        edad_usuario: Number.parseInt(formData.edad),
         categoria: formData.categoria,
         boleta: formData.boleta,
+        boleta_usuario: formData.boleta,
         escuela: formData.escuela,
+        escuela_usuario: formData.escuela,
       };
 
       await auth.updateProfile(payload);
@@ -246,14 +249,17 @@ export function EditProfileForm() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground block">Escuela</label>
+              <label className="block text-sm font-medium text-foreground mb-2"
+              >
+                Escuela
+              </label>
               <input
                 type="text"
                 name="escuela"
                 value={formData.escuela}
                 onChange={handleChange}
-                className="input-field w-full py-2 px-3 text-sm rounded-lg border border-border bg-card text-foreground"
-                
+                disabled
+                className="input-field opacity-60 cursor-not-allowed bg-muted"
               />
             </div>
 
@@ -273,7 +279,6 @@ export function EditProfileForm() {
                 disabled
                 className="input-field opacity-60 cursor-not-allowed bg-muted"
               />
-             
             </div>
           </div>
         </div>

@@ -31,6 +31,7 @@ export default function ModalSiembras({
               <input
                 type="number"
                 min="1"
+                max="32"
                 placeholder="Ej. 1"
                 defaultValue={p.numero_siembra || ""}
                 onChange={(e) => handleSiembraChange(p.id_inscripcion, e.target.value)}

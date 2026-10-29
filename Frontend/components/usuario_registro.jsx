@@ -12,7 +12,7 @@ export function RegistroForm() {
     username: "",
     sexo: "",
     age: "",
-    category: "",
+    categoria: "",
     boleta: "",
     escuela: "",
   });
@@ -38,11 +38,8 @@ export function RegistroForm() {
       return;
     }
 
-    if (
-      Number.parseInt(formData.age) < 8 ||
-      Number.parseInt(formData.age) > 100 ||
-      isNaN(Number.parseInt(formData.age))
-    ) {
+    const edadNum = Number.parseInt(formData.age);
+    if (isNaN(edadNum) || edadNum < 8 || edadNum > 100) {
       setError("Por favor ingresa una edad válida (entre 8 y 100)");
       return;
     }
@@ -50,48 +47,39 @@ export function RegistroForm() {
     setIsLoading(true);
 
     try {
-      const respuesta = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/usuario/`, { 
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          perfil: {
-            boleta_usuario: formData.boleta,
-            edad_usuario: parseInt(formData.age),
-            escuela_usuario: formData.escuela,
-            sexo_usuario: formData.sexo,
-            rol: 2,
-            categoria: parseInt(formData.category)
-          },
-          
-        }),
-      });
-      const data = await respuesta.json();
-      if (respuesta.ok){
-        // SI todo sale bien, redirigimos al usuario a la página de registro exitoso
-        router.push("/registro-exitoso");
-      }else {
-        // Si django rechaza el registro 
-        if (data.username) {
-          setError("El nombre de usuario ya esta en uso. Elige otro");
-        }else if(data.email){
-          setError("El correo electrónico ya esta en uso. Elige otro");
-        } else if(data.perfil?.boleta_usuario){
-          setError("El número de boleta ya esta en uso. Elige otro");
-        } 
-        else {
-          setError("Por favor verifica los datos ingresados. Algo salió mal.");
+      const payload = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        perfil: {
+          boleta: formData.boleta,
+          boleta_usuario: formData.boleta,
+          edad: edadNum,
+          edad_usuario: edadNum,
+          escuela: formData.escuela,
+          escuela_usuario: formData.escuela,
+          sexo: formData.sexo,
+          sexo_usuario: formData.sexo,
+          rol: 2, // Rol de Jugador por defecto
+          categoria: formData.categoria ? parseInt(formData.categoria) : null
         }
-      }
+      };
+
+      // Utilizamos el método register centralizado de lib/api.js
+      await auth.register(payload);
+      router.push("/registro-exitoso");
       
     } catch (err) {
-      setError(
-        err.message || "Error al crear la cuenta. Por favor intenta de nuevo.",
-      );
+      // Manejo inteligente de errores devueltos por el backend
+      if (err.username) {
+        setError("El nombre de usuario ya está en uso. Elige otro.");
+      } else if (err.email) {
+        setError("El correo electrónico ya está registrado.");
+      } else if (err.boleta || err.perfil?.boleta) {
+        setError("El número de boleta ya está registrado.");
+      } else {
+        setError(err.message || "Por favor verifica los datos ingresados. Algo salió mal.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -101,8 +89,8 @@ export function RegistroForm() {
     <div className="card-base">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
-            {error}
+          <div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm border border-destructive/20">
+            ⚠️ {error}
           </div>
         )}
 
@@ -126,8 +114,6 @@ export function RegistroForm() {
             />
           </div>
 
-         {/* Fila: Nombre de Usuario y Boleta */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Nombre de Usuario
@@ -158,7 +144,7 @@ export function RegistroForm() {
               required
             />
           </div>
-        </div>
+
           <div>
             <label
               htmlFor="password"
@@ -229,7 +215,7 @@ export function RegistroForm() {
               id="age"
               name="age"
               type="number"
-              min="14"
+              min="13"
               max="60"
               placeholder="20"
               value={formData.age}
@@ -238,10 +224,11 @@ export function RegistroForm() {
               className="input-field"
             />
           </div>
-          {/* Escuela de procedencia y Categoría de Juego */}
+
+          {/* Escuela de procedencia */}
           <div>
             <label
-              htmlFor="escuela_usuario"
+              htmlFor="escuela"
               className="block text-sm font-medium text-foreground mb-2"
             >
               Escuela de procedencia
@@ -258,7 +245,6 @@ export function RegistroForm() {
                 Selecciona tu escuela o unidad
               </option>
               
-              {/* Ingeniería y Ciencias Físico Matemáticas */}
               <optgroup label="Ingeniería y Ciencias Físico Matemáticas">
                 <option value="Escuela Superior de Cómputo (ESCOM)">Escuela Superior de Cómputo (ESCOM)</option>
                 <option value="Escuela Superior de Físico Matemáticas (ESFM)">Escuela Superior de Físico Matemáticas (ESFM)</option>
@@ -273,7 +259,6 @@ export function RegistroForm() {
                 <option value="Escuela Superior Textil (ESIT)">Escuela Superior Textil (ESIT)</option>
               </optgroup>
 
-              {/* Ciencias Médico Biológicas */}
               <optgroup label="Ciencias Médico Biológicas">
                 <option value="Centro Interdisciplinario de Ciencias de la Salud (CICS) Unidad Milpa Alta">Centro Interdisciplinario de Ciencias de la Salud (CICS) Unidad Milpa Alta</option>
                 <option value="Centro Interdisciplinario de Ciencias de la Salud (CICS) Unidad Santo Tomás">Centro Interdisciplinario de Ciencias de la Salud (CICS) Unidad Santo Tomás</option>
@@ -283,7 +268,6 @@ export function RegistroForm() {
                 <option value="Escuela Superior de Medicina (ESM)">Escuela Superior de Medicina (ESM)</option>
               </optgroup>
 
-              {/* Ciencias Sociales y Administrativas */}
               <optgroup label="Ciencias Sociales y Administrativas">
                 <option value="Escuela Superior de Economía (ESE)">Escuela Superior de Economía (ESE)</option>
                 <option value="Escuela Superior de Comercio y Administración (ESCA) Unidad Santo Tomás">Escuela Superior de Comercio y Administración (ESCA) Unidad Santo Tomás</option>
@@ -292,7 +276,6 @@ export function RegistroForm() {
                 <option value="Escuela Nacional de Biblioteconomía y Archivonomía (ENBA)">Escuela Nacional de Biblioteconomía y Archivonomía (ENBA)</option>
               </optgroup>
 
-              {/* Interdisciplinarias */}
               <optgroup label="Interdisciplinarias">
                 <option value="Unidad Profesional Interdisciplinaria de Biotecnología (UPIBI)">Unidad Profesional Interdisciplinaria de Biotecnología (UPIBI)</option>
                 <option value="Unidad Profesional Interdisciplinaria de Ingeniería (UPIIG) Campus Guanajuato">Unidad Profesional Interdisciplinaria de Ingeniería (UPIIG) Campus Guanajuato</option>
@@ -304,52 +287,50 @@ export function RegistroForm() {
                 <option value="Unidad Profesional Interdisciplinaria de Ingeniería, Campus Palenque (UPIIP)">Unidad Profesional Interdisciplinaria de Ingeniería, Campus Palenque (UPIIP)</option>
                 <option value="Unidad Profesional Interdisciplinaria de Ingeniería, Campus Tlaxcala (UPIIT)">Unidad Profesional Interdisciplinaria de Ingeniería, Campus Tlaxcala (UPIIT)</option>
               </optgroup>
-              
 
-              {/* Posgrados e Investigación */}
               <optgroup label="Centros de Investigación / Posgrado">
                 <option value="CIC">CIC - Centro de Investigación en Computación</option>
                 <option value="CINVESTAV">CINVESTAV</option>
                 <option value="Otro">Otro</option>
               </optgroup>
-              {/* Nivel Medio Superior */}
+
               <optgroup label="Nivel Medio Superior">
-                <option value="CECyT 1">CECyT 1 - "Gonzalo Vázquez Vela"</option>
-                <option value="CECyT 2">CECyT 2 - "Miguel Bernard"</option>
-                <option value="CECyT 3">CECyT 3 - "Estanislao Ramírez Ruiz"</option>
-                <option value="CECyT 4">CECyT 4 - "Lázaro Cárdenas"</option>
-                <option value="CECyT 5">CECyT 5 - "Benito Juárez"</option>
-                <option value="CECyT 6">CECyT 6 - "Miguel Othón de Mendizábal"</option>
-                <option value="CECyT 7">CECyT 7 - "Cuauhtémoc"</option>
-                <option value="CECyT 8">CECyT 8 - "Narciso Bassols"</option>
-                <option value="CECyT 9">CECyT 9 - "Juan de Dios Bátiz"</option>
-                <option value="CECyT 10">CECyT 10 - "Carlos Vallejo Márquez"</option>
-                <option value="CECyT 11">CECyT 11 - "Wilfrido Massieu"</option>
-                <option value="CECyT 12">CECyT 12 - "José María Morelos"</option>
-                <option value="CECyT 13">CECyT 13 - "Ricardo Flores Magón"</option>
-                <option value="CECyT 14">CECyT 14 - "Luis Enrique Erro Soler"</option>
-                <option value="CECyT 15">CECyT 15 - "Diódoro Antúnez Echagaray"</option>
-                <option value="CECyT 16">CECyT 16 - "Unidad Hidalgo"</option> 
-                <option value="CECyT 17">CECyT 17 - "Unidad Guanajuato"</option>
-                <option value="CECyT 18">CECyT 18 - "Unidad Zacatecas"</option>
-                <option value="CECyT 19">CECyT 19 - "Leona Vicario Unidad Tecámac"</option>
-                
+                <option value="CECyT 1">CECyT 1 - &quot;Gonzalo Vázquez Vela&quot;</option>
+                <option value="CECyT 2">CECyT 2 - &quot;Miguel Bernard&quot;</option>
+                <option value="CECyT 3">CECyT 3 - &quot;Estanislao Ramírez Ruiz&quot;</option>
+                <option value="CECyT 4">CECyT 4 - &quot;Lázaro Cárdenas&quot;</option>
+                <option value="CECyT 5">CECyT 5 - &quot;Benito Juárez&quot;</option>
+                <option value="CECyT 6">CECyT 6 - &quot;Miguel Othón de Mendizábal&quot;</option>
+                <option value="CECyT 7">CECyT 7 - &quot;Cuauhtémoc&quot;</option>
+                <option value="CECyT 8">CECyT 8 - &quot;Narciso Bassols&quot;</option>
+                <option value="CECyT 9">CECyT 9 - &quot;Juan de Dios Bátiz&quot;</option>
+                <option value="CECyT 10">CECyT 10 - &quot;Carlos Vallejo Márquez&quot;</option>
+                <option value="CECyT 11">CECyT 11 - &quot;Wilfrido Massieu&quot;</option>
+                <option value="CECyT 12">CECyT 12 - &quot;José María Morelos&quot;</option>
+                <option value="CECyT 13">CECyT 13 - &quot;Ricardo Flores Magón&quot;</option>
+                <option value="CECyT 14">CECyT 14 - &quot;Luis Enrique Erro Soler&quot;</option>
+                <option value="CECyT 15">CECyT 15 - &quot;Diódoro Antúnez Echagaray&quot;</option>
+                <option value="CECyT 16">CECyT 16 - &quot;Unidad Hidalgo&quot;</option> 
+                <option value="CECyT 17">CECyT 17 - &quot;Unidad Guanajuato&quot;</option>
+                <option value="CECyT 18">CECyT 18 - &quot;Unidad Zacatecas&quot;</option>
+                <option value="CECyT 19">CECyT 19 - &quot;Leona Vicario Unidad Tecámac&quot;</option>
               </optgroup>
             </select>
           </div>
 
+          {/* Categoría de Juego */}
           <div className="md:col-span-2">
             <label
-              htmlFor="category"
+              htmlFor="categoria"
               className="block text-sm font-medium text-foreground mb-2"
             >
               Categoría de Juego
             </label>
             <select
-              id="category"
-              name="category"
-              value={formData.category}
-              onChange={(e) => handleSelectChange("category", e.target.value)}
+              id="categoria"
+              name="categoria"
+              value={formData.categoria}
+              onChange={(e) => handleSelectChange("categoria", e.target.value)}
               required
               className="input-field"
             >
