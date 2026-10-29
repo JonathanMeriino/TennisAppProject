@@ -19,10 +19,4 @@ router.register(r'categoria', views.CategoriaViewSet, basename='categoria')
 #Incluye todas las rutas generadas por el Router
 urlpatterns = [
     path('',include(router.urls)),
-    path('auth/me', views.GetUserViewSet.as_view({
-        "get": "get",
-        "put": "put",
-        "patch": "put"
-    }), name='get_user'),
-    path('auth/reset-password/', views.password_reset_simple, name='reset_password'),
 ]
