@@ -2,7 +2,7 @@ import json
 import math
 import datetime
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,7 +11,7 @@ from ortools.sat.python import cp_model  # <--- IMPORTACIÓN DEL SOLVER DE GOOGL
 
 from .serializer import (CategoriaSerializer, RolesSerializer, UserSerializer, TorneoSerializer, InscripcionesSerializer, PartidoSerializer,ResultadoSerializer )
 from .models import (
-    Categoria, Roles, User, Torneo,
+    Categoria, Perfil, Roles, User, Torneo,
     Inscripcion, Partido, Resultado
 )
 from .permissions import IsAdminUserCustom
@@ -111,54 +111,6 @@ def asignar_horario_dinamico(partido):
 # CONTROLADORES DE LA API (VIEWS)
 # =========================================================================
 
-class GetUserViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get (self,request):
-        user = request.user
-        perfil = getattr(user, 'perfil', None)
-
-        categoria_val = None
-        if perfil and perfil.categoria:
-            categoria_val = getattr(perfil.categoria, 'nombre_categoria', str(perfil.categoria))
-
-        return Response({
-            "username": user.username,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "date_joined": user.date_joined,
-            "perfil": {
-                "boleta_usuario": perfil.boleta_usuario if perfil else None,
-                "categoria": categoria_val,
-                "edad_usuario": perfil.edad_usuario if perfil else None,
-                "sexo_usuario": perfil.sexo_usuario if perfil else None,
-                "escuela_usuario": perfil.escuela_usuario if perfil else None,
-                "rol": perfil.rol.nombre_rol if perfil and perfil.rol else None
-            }
-        })
-        
-    def put(self, request):
-        user = request.user
-        perfil = getattr(user, 'perfil', None)
-
-        serializer = UserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response(serializer.errors, status=400)
-
-        if perfil:
-            edad = request.data.get('edad_usuario', perfil.edad_usuario)
-            escuela = request.data.get('escuela_usuario', perfil.escuela_usuario)
-
-            if edad is not None and edad != '':
-                perfil.edad_usuario = edad
-            if escuela is not None and escuela != '':
-                perfil.escuela_usuario = escuela
-            perfil.save()
-        
-        return Response({"message": "Perfil actualizado correctamente"})
         
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
@@ -167,6 +119,66 @@ class RolesViewSet(viewsets.ModelViewSet):
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    # Acción para obtener y actualizar el perfil del usuario autenticado (Endpoint: /usuario/me/)
+    @action(detail=False, methods=['get', 'put', 'patch'], url_path='me', permission_classes=[IsAuthenticated])
+    def me(self, request):
+        user = request.user
+        perfil = Perfil.objects.filter(user=user).first()
+
+        if request.method == 'GET':
+            categoria_nombre = perfil.categoria.nombre_categoria if perfil and perfil.categoria else None
+            rol_nombre = perfil.rol.nombre_rol if perfil and perfil.rol else None
+
+            # Enviamos tanto las claves con sufijo como las limpias para compatibilidad total con el frontend
+            return Response({
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "date_joined": user.date_joined,
+                "perfil": {
+                    "boleta": perfil.boleta if perfil else None,
+                    "boleta_usuario": perfil.boleta if perfil else None,
+                    "categoria": categoria_nombre,
+                    "edad": perfil.edad if perfil else None,
+                    "edad_usuario": perfil.edad if perfil else None,
+                    "sexo": perfil.sexo if perfil else None,
+                    "sexo_usuario": perfil.sexo if perfil else None,
+                    "escuela": perfil.escuela if perfil else None,
+                    "escuela_usuario": perfil.escuela if perfil else None,
+                    "rol": rol_nombre
+                }
+            })
+        
+        elif request.method in ['PUT', 'PATCH']:
+            serializer = self.get_serializer(user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            if not perfil:
+                perfil = Perfil.objects.create(user=user)
+
+            # Capturamos los datos sin importar cómo los envíe el formulario frontend
+            perfil.edad = request.data.get('edad_usuario') or request.data.get('edad', perfil.edad)
+            perfil.escuela = request.data.get('escuela_usuario') or request.data.get('escuela', perfil.escuela)
+            perfil.save()
+            
+            return Response({"message": "Perfil actualizado correctamente"})
+
+    # Acción para resetear la contraseña (Endpoint: /usuario/reset-password/)
+    @action(detail=False, methods=['post'], url_path='reset-password', permission_classes=[AllowAny])
+    def reset_password(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        
+        try:
+            user_obj = User.objects.get(email=email)
+            user_obj.set_password(new_password)
+            user_obj.save()
+            return Response({"detail": "Contraseña actualizada."}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Correo no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
 class TorneoViewSet(viewsets.ModelViewSet):
     queryset = Torneo.objects.all()
@@ -377,31 +389,28 @@ class TorneoViewSet(viewsets.ModelViewSet):
 
         return Response({"status": f"Cuadro estructurado. Partidos iniciales agendados para {num_jugadores} competidores."}, status=status.HTTP_201_CREATED)
         
-    @action(detail=True, methods = ['post'])
+    @action(detail=True, methods=['post'])
     def inscribir(self, request, pk=None):
         torneo = self.get_object()
-        user = request.user
         if torneo.estado_torneo != 'Programado':
-            return Response({"detail": "No puedes inscribirte en un torneo que ya ha comenzado o finalizado."}, status=status.HTTP_400_BAD_REQUEST) 
+            return Response({"detail": "Torneo cerrado para inscripciones."}, status=status.HTTP_400_BAD_REQUEST) 
 
-        perfil = getattr(user, 'perfil', None)
-        sexo_usuario = perfil.sexo_usuario if perfil else None
-        rama_torneo = torneo.rama_torneo
+        # Búsqueda segura del perfil para evitar la excepción 500 si no existe
+        perfil = Perfil.objects.filter(user=request.user).first()
+        if not perfil:
+            return Response({"detail": "Debes completar tu perfil antes de inscribirte."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if rama_torneo != 'Mixto' and sexo_usuario:
-            es_masculino = sexo_usuario.lower() in ['masculino', 'hombre', 'm','varonil']
-            es_femenino = sexo_usuario.lower() in ['femenino', 'mujer','femenil', 'f']
-
-            if rama_torneo == 'Varonil' and not es_masculino:
+        if torneo.rama_torneo != 'Mixto' and perfil.sexo:
+            es_masc = perfil.sexo == 'M'
+            if torneo.rama_torneo == 'Varonil' and not es_masc:
                 return Response({"detail": "Este torneo es solo para jugadores varoniles."}, status=status.HTTP_400_BAD_REQUEST)
-            if rama_torneo == 'Femenil' and not es_femenino:
+            if torneo.rama_torneo == 'Femenil' and es_masc:
                 return Response({"detail": "Este torneo es solo para jugadoras femeniles."}, status=status.HTTP_400_BAD_REQUEST)
         
-        matriz_disponibilidad = request.data.get('matriz_disponibilidad')
-        inscripcion, created = Inscripcion.objects.get_or_create(
-            torneo=torneo,
-            jugador=user,
-            defaults={'matriz_disponibilidad': matriz_disponibilidad}
+        _, created = Inscripcion.objects.get_or_create(
+            torneo=torneo, 
+            jugador=request.user,
+            defaults={'matriz_disponibilidad': request.data.get('matriz_disponibilidad')}
         )
         
         if not created:
@@ -470,6 +479,8 @@ class PartidoViewSet(viewsets.ModelViewSet):
     queryset = Partido.objects.all()
     serializer_class = PartidoSerializer
 
+    
+
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
@@ -512,20 +523,46 @@ class ResultadoViewSet(viewsets.ModelViewSet):
             if torneo:
                 torneo.estado_torneo = 'Finalizado'
                 torneo.save()
-
-# =========================================================================
-# VISTA DE RECUPERACIÓN DE CONTRASEÑA SIMPLIFICADA
-# =========================================================================
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def password_reset_simple(request):
-    email = request.data.get('email')
-    new_password = request.data.get('new_password')
-    
-    try:
-        user = User.objects.get(email=email)
-        user.set_password(new_password)  # Encripta correctamente la contraseña para Django
-        user.save()
-        return Response({"detail": "Contraseña actualizada con éxito."}, status=status.HTTP_200_OK)
-    except User.DoesNotExist:
-        return Response({"error": "No existe un usuario con este correo."}, status=status.HTTP_404_NOT_FOUND)
+        
+    @action(detail=False, methods=['post'], url_path='deshacer', permission_classes=[IsAuthenticated])
+    def deshacer(self, request):
+        partido_id = request.data.get('partido') or request.query_params.get('partido')
+                    
+        if not partido_id:
+            return Response({"error": "Falta ID del partido."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Búsqueda segura del perfil para evitar excepciones 500
+        perfil = Perfil.objects.filter(user=request.user).first()
+        es_admin = (
+            request.user.is_staff or 
+            request.user.is_superuser or 
+            (perfil and perfil.rol and (perfil.rol.nombre_rol == "Administrador" or str(perfil.rol) == "Administrador"))
+        )
+        
+        if not es_admin:
+            return Response({"error": "No tienes permisos."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            partido = Partido.objects.get(pk=partido_id)
+        except Partido.DoesNotExist:
+            return Response({"error": "El partido no existe."}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Revertir siguiente ronda
+        if partido.partido_siguiente:
+            sig = partido.partido_siguiente
+            ganador_actual = partido.ganador # Utiliza la @property del modelo
+        
+            if ganador_actual:
+                if sig.jugador1 == ganador_actual: 
+                    sig.jugador1 = None
+                elif sig.jugador2 == ganador_actual: 
+                    sig.jugador2 = None
+                sig.estado = 'Pendiente'
+                sig.save()
+        
+        # Eliminar registro de victoria y restablecer partido
+        Resultado.objects.filter(partido=partido).delete()
+        partido.estado = 'Programado'
+        partido.save()
+        
+        return Response({"message": "Resultado deshecho."}, status=status.HTTP_200_OK)      
