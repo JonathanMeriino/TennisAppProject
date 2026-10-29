@@ -9,6 +9,7 @@ class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
         fields = '__all__'
+
 #Serializer Torneo
 class TorneoSerializer(serializers.ModelSerializer):
     nombre_categoria = serializers.CharField(source='categoria.nombre_categoria', read_only=True)
@@ -17,116 +18,117 @@ class TorneoSerializer(serializers.ModelSerializer):
         model = Torneo
         fields = '__all__'
 
-#Serializaer Roles
+#Serializer Roles
 class RolesSerializer (serializers.ModelSerializer):
     class Meta:
         model = Roles 
         fields = '__all__'
 
 
-
-#Serializer Usuario
+# --- SERIALIZERS DE USUARIO Y PERFIL ---
 
 class PerfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Perfil
-        fields = ['boleta_usuario', 'edad_usuario', 'sexo_usuario', 'rol','escuela_usuario', 'categoria']
+        # Ajustado a los nombres limpios del modelo refactorizado, soportando ambos por compatibilidad
+        fields = ['boleta', 'edad', 'sexo', 'rol', 'escuela', 'categoria']
 
 class UserSerializer(serializers.ModelSerializer):
-    # Incrustamos el perfil aquí
-    perfil = PerfilSerializer()
+    perfil = PerfilSerializer(required=False)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email','password', 'first_name', 'last_name', 'perfil']
-        # Añadimos esta linea para que la contraseña sea segura y no viaje de regreso
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'perfil']
         extra_kwargs = {
             'password': {'write_only': True},
             'email': {'required': True},
         }
-    #Validar si el correo existe antes de crear
+
     def validate(self, data):
-        # Validar si el email ya existe en la base de datos
         email = data.get('email')
 
         if email:
             if self.instance:
-                # Solo lanza el error si pertenece a OTRO usuario diferente al actual
                 if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
                     raise serializers.ValidationError({"email": "Este correo ya está registrado por otro usuario."})
             else:
                 if User.objects.filter(email=email).exists():
                     raise serializers.ValidationError({"email": "Este correo ya está registrado."})
 
-
-        # Validar si la boleta ya existe en la tabla de Perfil (excsluyendo al usuario actual si aplica)
+        # Validar boleta en el perfil
         perfil_data = data.get('perfil', {})
-        boleta_usuario = perfil_data.get('boleta_usuario')
-        if boleta_usuario:
-            query = Perfil.objects.filter(boleta_usuario=boleta_usuario)
+        boleta = perfil_data.get('boleta') or perfil_data.get('boleta_usuario')
+        if boleta:
+            query = Perfil.objects.filter(boleta=boleta)
             if self.instance:
                 query = query.exclude(user=self.instance)
             if query.exists():
-                raise serializers.ValidationError({"boleta_usuario": "Esta boleta ya está registrada."})
+                raise serializers.ValidationError({"boleta": "Esta boleta ya está registrada."})
                 
         return data
 
-    # Sobreescribimos create para guardar ambas tablas al mismo tiempo
     def create(self, validated_data):
-        #Extraemos los datos del perfil si vienen en el request
-        perfil_data = validated_data.pop('perfil') 
-        password = validated_data.pop('password') 
-        #Creamos el usuario base
-        user = User.objects.create_user(password=password, **validated_data)
+        perfil_data = validated_data.pop('perfil', {})
+        password = validated_data.pop('password', None)
         
-        # Actualizamos el perfil que se creó automáticamente por la Signal
-        Perfil.objects.update_or_create(
-            user=user,
-            defaults={
-                'boleta_usuario': perfil_data.get('boleta_usuario'),
-                'edad_usuario': perfil_data.get('edad_usuario'),
-                'sexo_usuario': perfil_data.get('sexo_usuario'),
-                'categoria': perfil_data.get('categoria'),
-                'rol': perfil_data.get('rol', 1),
-                'escuela_usuario': perfil_data.get('escuela_usuario')
-            }
-        )
+        user = User.objects.create(**validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+
+        perfil, _ = Perfil.objects.get_or_create(user=user)
         
+        # Mapeo unificado compatible con los nombres nuevos y antiguos
+        perfil.boleta = perfil_data.get('boleta') or perfil_data.get('boleta_usuario', perfil.boleta)
+        perfil.edad = perfil_data.get('edad') or perfil_data.get('edad_usuario', perfil.edad)
+        perfil.escuela = perfil_data.get('escuela') or perfil_data.get('escuela_usuario', perfil.escuela)
+        perfil.sexo = perfil_data.get('sexo') or perfil_data.get('sexo_usuario', perfil.sexo)
+        
+        if 'rol' in perfil_data and perfil_data['rol']:
+            perfil.rol_id = perfil_data['rol']
+        if 'categoria' in perfil_data and perfil_data['categoria']:
+            perfil.categoria_id = perfil_data['categoria']
+            
+        perfil.save()
         return user
+    
     def update(self, instance, validated_data):
         perfil_data = validated_data.pop('perfil', {})
         
-       
-        # Actualizamos los datos basicos del usuario
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
-        
         instance.save()
 
-        # Actualizacion del perfil asociado
+        perfil, _ = Perfil.objects.get_or_create(user=instance)
+
         if perfil_data:
-            Perfil.objects.update_or_create(
-                user=instance,
-                defaults={
-                    'boleta_usuario': perfil_data.get('boleta_usuario', getattr(instance, 'perfil', None) and instance.perfil.boleta_usuario),
-                    'edad_usuario': perfil_data.get('edad_usuario', getattr(instance, 'perfil', None) and instance.perfil.edad_usuario),
-                    'sexo_usuario': perfil_data.get('sexo_usuario', getattr(instance, 'perfil', None) and instance.perfil.sexo_usuario),
-                    'categoria': perfil_data.get('categoria', getattr(instance, 'perfil', None) and instance.perfil.categoria),
-                    'escuela_usuario': perfil_data.get('escuela_usuario', getattr(instance, 'perfil', None) and instance.perfil.escuela_usuario),
-                }
-            )
+            perfil.boleta = perfil_data.get('boleta') or perfil_data.get('boleta_usuario', perfil.boleta)
+            perfil.edad = perfil_data.get('edad') or perfil_data.get('edad_usuario', perfil.edad)
+            perfil.sexo = perfil_data.get('sexo') or perfil_data.get('sexo_usuario', perfil.sexo)
+            perfil.escuela = perfil_data.get('escuela') or perfil_data.get('escuela_usuario', perfil.escuela)
+
+            es_admin = instance.is_staff or instance.is_superuser or (hasattr(instance, 'perfil') and instance.perfil.rol and instance.perfil.rol.nombre_rol == 'Administrador')
+            
+            if es_admin:
+                nueva_escuela = perfil_data.get('escuela') or perfil_data.get('escuela_usuario')
+                if nueva_escuela:
+                    perfil.escuela = nueva_escuela
+            if 'rol' in perfil_data:
+                perfil.rol_id = perfil_data.get('rol')
+            if 'categoria' in perfil_data:
+                perfil.categoria_id = perfil_data.get('categoria')
+                
+            perfil.save()
             
         return instance
-
 
 
 #Serializer Inscripciones
 class InscripcionesSerializer(serializers.ModelSerializer):
     nombre_jugador = serializers.CharField(source='jugador.username', read_only=True)
-    nombre_torneo = serializers.CharField(source='torneo.nombre', read_only=True)
-    # Extrae el nombre de la categoría asignada al perfil del jugador
+    nombre_torneo = serializers.CharField(source='torneo.nombre_torneo', read_only=True)
     categoria_jugador = serializers.CharField(
         source='jugador.perfil.categoria.nombre_categoria', 
         read_only=True, 
@@ -139,26 +141,23 @@ class InscripcionesSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_inscripcion']
 
     def validate(self, data):
-        # Si la instancia ya existe, significa que es una actualización (como guardar la siembra), 
-        # por lo que saltamos esta validación de perfil.
         if self.instance is not None:
             return data
 
         jugador = data.get('jugador')
         torneo = data.get('torneo')
 
-        # 1. Validar que el perfil exista
         if not hasattr(jugador, 'perfil'):
             raise serializers.ValidationError({
-                "jugador": "Debes completar tu perfil (sexo, categoría, etc.) antes de inscribirte."
+                "jugador": "Debes completar tu perfil antes de inscribirte."
             })
 
         perfil = jugador.perfil
 
-        # Validación de Rama (Sexo)
-        if torneo.rama_torneo == 'Varonil' and perfil.sexo_usuario != 'M':
+        # Validación de Rama (Sexo) - Ajustada al campo 'sexo' del modelo refactorizado
+        if torneo.rama_torneo == 'Varonil' and perfil.sexo != 'M':
             raise serializers.ValidationError({"rama": "Inscripción rechazada. El torneo está restringido a la rama Varonil."})
-        elif torneo.rama_torneo == 'Femenil' and perfil.sexo_usuario != 'F':
+        elif torneo.rama_torneo == 'Femenil' and perfil.sexo != 'F':
             raise serializers.ValidationError({"rama": "Inscripción rechazada. El torneo está restringido a la rama Femenil."})
 
         # Validación de Categoría Relacional
@@ -168,7 +167,6 @@ class InscripcionesSerializer(serializers.ModelSerializer):
             })
 
         return data
-
 
 
 class ResultadoSerializer(serializers.ModelSerializer):
@@ -185,9 +183,10 @@ class PartidoSerializer(serializers.ModelSerializer):
     username_j2 = serializers.CharField(source='jugador2.jugador.username', read_only=True)
     siembra_j2 = serializers.IntegerField(source='jugador2.numero_siembra', read_only=True)
 
-    resultado=ResultadoSerializer(read_only=True)
-    username_ganador = serializers.CharField(source='ganador.jugador.user.username', read_only=True, allow_null=True)
+    resultado = ResultadoSerializer(read_only=True)
+    # Corregida la ruta de source para apuntar correctamente al username del ganador a través de la inscripción
+    username_ganador = serializers.CharField(source='ganador.jugador.username', read_only=True, allow_null=True)
+    
     class Meta:
         model = Partido
         fields = '__all__'
-    
