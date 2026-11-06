@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers
 
 load_dotenv()
 
@@ -27,7 +28,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG') == 'True'
 
 
-ALLOWED_HOSTS = ["*"]
+# Permitir dominios de ngrok durante las pruebas
+ALLOWED_HOSTS = ["guise-gondola-eclair.ngrok-free.dev", "localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -170,15 +172,32 @@ REST_FRAMEWORK = {
    
 }
 
-CORS_ALLOWED_ORIGINS = [
+""" CORS_ALLOWED_ORIGINS = [
     "https://guise-gondola-eclair.ngrok-free.dev",
     "http://localhost",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:3001",
 ]
+ """
+
+ # Permitir todos los métodos HTTP requeridos por la API
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+# 1. Permitir cualquier origen de origen cruzado durante las pruebas
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # El token de uso expira en 1 hora
