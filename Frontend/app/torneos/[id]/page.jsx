@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { tournaments as tournamentsApi, auth } from "@/lib/api";
+import { tournaments as tournamentsApi, auth, API_URL } from "@/lib/api";
 // Importación de componentes
 import TournamentResults from "@/components/torneos_cuadro";
 import TorneoDetalles from "@/components/torneo_detalles";
@@ -52,23 +52,11 @@ const [categories, setCategories] = useState([]);
 
 useEffect(() => {
   const fetchCategories = async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-    
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/categoria/', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Categorías obtenidas de la API:", data); // Para verificar en la consola
-        setCategories(data);
-      } else {
-        console.error("Error al obtener categorías:", response.status);
-      }
+      const data = await categories.list();
+      setCategories(data);
     } catch (error) {
-      console.error("Error de red al obtener categorías:", error);
+      console.error("Error al obtener categorías:", error);
     }
   };
 
@@ -221,66 +209,36 @@ useEffect(() => {
   };
   // Función para enviar la actualización al backend
   const handleUpdateTorneo = async (e) => {
-    e.preventDefault();
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  e.preventDefault();
 
-    // Garantizar que canchas_disponibles tenga al menos 1
-    const payload = {
-      ...editForm,
-      canchas_disponibles: editForm.canchas_disponibles === '' ? 1 : editForm.canchas_disponibles,
-      categoria: parseInt(editForm.categoria, 10),
-      descripcion_torneo: editForm.descripcion || ''
-    };
-
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/torneo/${id}/`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        toast.success("Parámetros del torneo actualizados exitosamente.");
-        setIsEditing(false);
-        window.location.reload();
-      } else {
-        const errorData = await response.json();
-        console.error(errorData);
-        toast.error("Error al actualizar los parámetros del torneo.");
-      }
-    } catch (error) {
-      console.error("Error de red:", error);
-      toast.error("Error de red al intentar conectar con el servidor.");
-    }
+  const payload = {
+    ...editForm,
+    canchas_disponibles: editForm.canchas_disponibles === '' ? 1 : editForm.canchas_disponibles,
+    categoria: parseInt(editForm.categoria, 10),
+    descripcion_torneo: editForm.descripcion || ''
   };
+
+  try {
+    await tournamentsApi.update(id, payload);
+    toast.success("Parámetros del torneo actualizados exitosamente.");
+    setIsEditing(false);
+    window.location.reload();
+  } catch (error) {
+    console.error("Error al actualizar torneo:", error);
+    toast.error(error.message || "Error al actualizar los parámetros del torneo.");
+  }
+};
 
   const handleEliminarTorneo = async () => {
   if (!window.confirm("¿Estás seguro de que deseas eliminar este torneo? Se borrarán todos los datos y partidos asociados permanentemente.")) return;
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/torneo/${id}/`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      toast.success("Torneo eliminado exitosamente.");
-      // Redirigir al usuario al panel principal o listado de torneos tras borrarlo
-      window.location.href = "/dashboard"; 
-    } else {
-      toast.error("Hubo un error al intentar eliminar el torneo.");
-    }
+    await tournamentsApi.delete(id);
+    toast.success("Torneo eliminado exitosamente.");
+    window.location.href = "/dashboard"; 
   } catch (error) {
-    console.error("Error de red:", error);
-    toast.error("Error de red al intentar conectar con el servidor.");
+    console.error("Error al eliminar torneo:", error);
+    toast.error(error.message || "Hubo un error al intentar eliminar el torneo.");
   }
 };
 
@@ -318,27 +276,13 @@ useEffect(() => {
   const handleResetearTorneo = async () => {
   if (!window.confirm("¿Estás seguro de resetear el torneo? Se borrarán todos los partidos actuales y se abrirán de nuevo las inscripciones.")) return;
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/torneo/${id}/resetear_torneo/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      toast.success("Torneo reseteado correctamente.");
-      window.location.reload(); // Recarga la página para refrescar el estado del cuadro y del torneo
-    } else {
-      const errorData = await response.json();
-      toast.error(errorData.error || "No se pudo resetear el torneo.");
-    }
+    await tournamentsApi.reset(id);
+    toast.success("Torneo reseteado correctamente.");
+    window.location.reload();
   } catch (error) {
-    console.error("Error de red:", error);
-    toast.error("Error de red al intentar conectar con el servidor.");
+    console.error("Error al resetear torneo:", error);
+    toast.error(error.error || error.message || "No se pudo resetear el torneo.");
   }
 };
   const handleOpenInscribeModal = () => {
@@ -365,24 +309,14 @@ useEffect(() => {
   
   const handleEliminarJugador = async (idInscripcion) => {
   if (!window.confirm("¿Estás seguro de que deseas eliminar a este jugador del torneo?")) return;
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;      
-  try {
-    // Nota el cambio de 'inscripciones' a 'inscripcion' (en singular)
-    const response = await fetch(`http://127.0.0.1:8000/api/inscripcion/${idInscripcion}/`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
 
-    if (response.ok) {
-      setParticipants(participants.filter(ins => ins.id_inscripcion !== idInscripcion));
-      toast.success("Jugador eliminado exitosamente.");
-    } else {
-      toast.error("Hubo un error al procesar la eliminación.");
-    }
+  try {
+    await tournamentsApi.removeParticipant(idInscripcion);
+    setParticipants((prev) => prev.filter(ins => ins.id_inscripcion !== idInscripcion));
+    toast.success("Jugador eliminado exitosamente.");
   } catch (error) {
-    toast.error("Error de red al intentar conectar con el servidor.");
+    console.error("Error al eliminar jugador:", error);
+    toast.error("Hubo un error al procesar la eliminación.");
   }
 };
 
