@@ -45,6 +45,7 @@ async function request(url, options = {}) {
   
   const headers = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
     ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
@@ -125,6 +126,34 @@ export const tournaments = {
       headers: {
         "Content-Type": "application/json",
       },
+    });
+  },
+  // Actualizar parámetros del torneo
+  async update(id, data) {
+    return request(`/api/torneo/${id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Eliminar torneo por completo
+  async delete(id) {
+    return request(`/api/torneo/${id}/`, {
+      method: "DELETE",
+    });
+  },
+
+  // Resetear enfrentamientos del torneo
+  async reset(id) {
+    return request(`/api/torneo/${id}/resetear_torneo/`, {
+      method: "POST",
+    });
+  },
+
+  // Eliminar un jugador específico de las inscripciones
+  async removeParticipant(inscriptionId) {
+    return request(`/api/inscripcion/${inscriptionId}/`, {
+      method: "DELETE",
     });
   },
 
