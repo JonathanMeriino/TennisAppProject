@@ -63,22 +63,16 @@ export default function ModalEdicion({
             <select
               value={editForm.categoria}
               onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value })}
-              className="w-full p-2 text-sm border border-border rounded-md bg-background text-foreground"
+              className="w-full p-2 border rounded-md"
               required
             >
-              <option value="">Selecciona tu categoría</option>
-              {categories && categories.length > 0 ? (
-                categories.map((cat) => (
-                  <option 
-                    key={cat.id_categoria || cat.id} 
-                    value={cat.id_categoria || cat.id}
-                  >
-                    {cat.nombre_categoria || cat.nombre || `Categoría ${cat.id_categoria || cat.id}`}
-                  </option>
-                ))
-              ) : (
-                <option disabled>Cargando categorías...</option>
-              )}
+              <option value="">Selecciona una categoría</option>
+              {categories.map((cat) => (
+                // Asegurar que use la clave primaria correcta devuelta por la API (ej: id_categoria o id)
+                <option key={cat.id_categoria || cat.id} value={cat.id_categoria || cat.id}>
+                  {cat.nombre_categoria || cat.nombre}
+                </option>
+              ))}
             </select>
           </div>
 

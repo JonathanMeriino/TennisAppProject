@@ -227,3 +227,11 @@ export const tournaments = {
     });
   },
 };
+
+// --- Categorías -------------------------------------------------------------
+
+export const categories = {
+  async list() {
+    return request("/api/categoria/"); // 👈 Utiliza la función interna request que ya gestiona headers y el API_URL
+  },
+};

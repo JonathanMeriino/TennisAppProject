@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { tournaments as tournamentsApi, auth, API_URL } from "@/lib/api";
+import { tournaments as tournamentsApi, auth, categories as categoriesApi } from "@/lib/api";
 // Importación de componentes
 import TournamentResults from "@/components/torneos_cuadro";
 import TorneoDetalles from "@/components/torneo_detalles";
@@ -53,8 +53,9 @@ const [categories, setCategories] = useState([]);
 useEffect(() => {
   const fetchCategories = async () => {
     try {
-      const data = await categories.list();
-      setCategories(data);
+      const data = await categoriesApi.list();
+      console.log("Categorías cargadas:", data);
+      setCategories(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
       console.error("Error al obtener categorías:", error);
     }
@@ -196,17 +197,27 @@ useEffect(() => {
   };
 
   // Función para abrir el modal y precargar los datos actuales
-  const handleOpenEdit = () => {
-    setEditForm({
-      nombre_torneo: tournament.nombre_torneo || '',
-      rama_torneo: tournament.rama_torneo || '',
-      fecha_inicio: tournament.fecha_inicio || '',
-      categoria: tournament.categoria || tournament.categoria_id || '',
-      canchas_disponibles: tournament.canchas_disponibles || 2,
-      descripcion: tournament.descripcion_torneo || ''
-    });
-    setIsEditing(true);
-  };
+  const handleOpenEdit = async () => {
+  if (categories.length === 0) {
+    try {
+      const data = await categoriesApi.list();
+      setCategories(Array.isArray(data) ? data : data.results || []);
+    } catch (error) {
+      console.error("Error al obtener categorías:", error);
+      toast.error("No se pudieron cargar las categorías.");
+    }
+  }
+
+  setEditForm({
+    nombre_torneo: tournament?.nombre_torneo || '',
+    rama_torneo: tournament?.rama_torneo || '',
+    fecha_inicio: tournament?.fecha_inicio || '',
+    categoria: tournament?.categoria || tournament?.categoria_id || '',
+    canchas_disponibles: tournament?.canchas_disponibles || 2,
+    descripcion: tournament?.descripcion_torneo || ''
+  });
+  setIsEditing(true);
+};
   // Función para enviar la actualización al backend
   const handleUpdateTorneo = async (e) => {
   e.preventDefault();
