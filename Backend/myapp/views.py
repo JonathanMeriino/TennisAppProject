@@ -47,7 +47,7 @@ def asignar_horario_dinamico(partido):
     m1 = get_matriz(partido.jugador1)
     m2 = get_matriz(partido.jugador2)
 
-    # 1. --- CÁLCULO DE LA FECHA BASE (EVITAR VIAJES EN EL TIEMPO) ---
+    # 1. --- CÁLCULO DE LA FECHA BASE ---
     hoy = datetime.date.today()
     fecha_minima_calculada = hoy
     
@@ -107,11 +107,7 @@ def asignar_horario_dinamico(partido):
             
     return False
 
-# =========================================================================
-# CONTROLADORES DE LA API (VIEWS)
-# =========================================================================
-
-        
+# CONTROLADORES DE LA API (VIEWS)    
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
     serializer_class = RolesSerializer
@@ -221,9 +217,9 @@ class TorneoViewSet(viewsets.ModelViewSet):
                 creados_en_ronda.append(partido)
             partidos_por_ronda[r] = creados_en_ronda
 
-        # =========================================================================
-        # ETAPA 3: GENERACIÓN DEL CUADRO (DIVIDE Y VENCERÁS)
-        # =========================================================================
+    
+        # ETAPA 1: GENERACIÓN DEL CUADRO (DIVIDE Y VENCERÁS)
+        
         sembrados_dict = {}
         sin_siembra = []
         
@@ -252,9 +248,8 @@ class TorneoViewSet(viewsets.ModelViewSet):
             if p > umbral_bye: slots[i] = 'BYE'
             elif p in sembrados_dict: slots[i] = sembrados_dict.pop(p)
                 
-        # =========================================================================
-        # ETAPA 4: EMPAREJAMIENTO DE SLOTS (CP-SAT / SOLUCIÓN ÓPTIMA GLOBAL)
-        # =========================================================================
+        # ETAPA 2: EMPAREJAMIENTO DE SLOTS (CP-SAT / SOLUCIÓN ÓPTIMA GLOBAL)
+
         restantes = list(sembrados_dict.values()) + sin_siembra
         vacios = [i for i, val in enumerate(slots) if val is None]
         
@@ -357,9 +352,9 @@ class TorneoViewSet(viewsets.ModelViewSet):
             partido.jugador2 = slots[(i * 2) + 1] if slots[(i * 2) + 1] != 'BYE' else None
             partido.save()
 
-        # =========================================================================
-        # ETAPA 5: PLANIFICADOR GLOBAL LIMPIO (MODO JUST-IN-TIME)
-        # =========================================================================
+        
+        # ETAPA 3: PLANIFICADOR GLOBAL LIMPIO (MODO JUST-IN-TIME)
+
         for r in range(1, total_rondas + 1):
             for partido in partidos_por_ronda[r]:
                 partido.refresh_from_db()
