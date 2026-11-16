@@ -52,7 +52,7 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Mi Panel</h2>
           <p className="text-muted-foreground">
-            Gestiona tus torneos y participaciones
+            Bienvenido a tu panel de usuario.
           </p>
         </div>
 

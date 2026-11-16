@@ -152,7 +152,7 @@ useEffect(() => {
 
     } catch (err) {
       toast.dismiss(loadingToast);
-      const errorMessage = err.message || "Error al inscribirse en el torneo.";
+      const errorMessage = err.message || "Error al inscribirse en el torneo. Verifica que sea tu rama correspondiente.";
       toast.error(errorMessage);
     } finally {
       setIsRegistering(false);

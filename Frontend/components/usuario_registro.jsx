@@ -137,6 +137,7 @@ export function RegistroForm() {
               type="text"
               name="boleta"
               placeholder="Ej. 2026630000"
+              minLength={5}
               maxLength={10}
               value={formData.boleta}
               onChange={handleChange}
