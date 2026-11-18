@@ -3,7 +3,9 @@ import React from "react";
 export default function TorneoJugadores({
   participants,
   isAdmin,
-  handleEliminarJugador
+  tournament,
+  handleEliminarJugador,
+  matchesLength = 0
 }) {
   return (
     <div className="card-base p-6 space-y-4">
@@ -41,8 +43,8 @@ export default function TorneoJugadores({
                 </div>
               </div>
 
-              {/* Botón de eliminación protegido por rol */}
-              {isAdmin && (
+              {/* Botón de eliminación protegido por rol y estado del torneo */}
+              {isAdmin && tournament?.estado_torneo === "Programado" && matchesLength === 0 && (
                 <button
                   onClick={() => handleEliminarJugador(participant.id_inscripcion)}
                   className="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-3 py-1.5 rounded-md transition-colors font-medium border border-red-100 ml-4"

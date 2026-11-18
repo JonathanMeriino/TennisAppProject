@@ -369,6 +369,8 @@ useEffect(() => {
           participants={participants}
           isAdmin={isAdmin}
           handleEliminarJugador={handleEliminarJugador}
+          tournament={tournament}
+          matchesLength={matches.length}
         />
 
         {/* Bracket / Llaves y Botones de Administración */}

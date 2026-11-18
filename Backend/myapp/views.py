@@ -1,6 +1,8 @@
 import json
 import math
 import datetime
+
+from jsonschema import ValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework import viewsets, permissions, status
@@ -469,6 +471,16 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         if user.is_superuser or (hasattr(user, 'perfil') and user.perfil.rol and user.perfil.rol.nombre_rol == 'Administrador'):
             return Inscripcion.objects.all()
         return Inscripcion.objects.filter(jugador=user)
+
+
+    def perform_destroy(self, instance):
+        torneo = instance.torneo
+        # Si el torneo ya pasó a 'En Curso' / 'Finalizado' o ya tiene partidos generados, bloquea la eliminación
+        if torneo.estado_torneo != Torneo.Estado.PROGRAMADO or torneo.partido_set.exists():
+            raise ValidationError(
+                {"detail": "No se pueden eliminar participantes una vez que el cuadro del torneo ya fue generado."}
+            )
+        instance.delete()
 
 class PartidoViewSet(viewsets.ModelViewSet):
     queryset = Partido.objects.all()
